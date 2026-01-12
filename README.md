@@ -1,6 +1,21 @@
 # Clean Yiddish Transcripts
 
-A web application for cleaning Yiddish transcripts by removing titles, headings, narrator notes, redactor notes, and other non-transcript content. The app provides a clean, modern web interface for processing individual Word documents or entire Google Drive folders.
+A specialized web application designed for cleaning Yiddish transcripts by removing titles, headings, narrator notes, redactor notes, and other non-transcript content. This tool was built specifically to process Yiddish interview transcripts, oral histories, and similar documents where the pure spoken content needs to be extracted from editorial additions.
+
+## Why This Tool Was Built for Yiddish Transcripts
+
+Yiddish transcripts often contain:
+- **Editorial notes** added by transcribers or redactors
+- **Interviewer questions and labels** that interrupt the narrative flow
+- **Chapter markers and section headings** added for organization
+- **Timestamps** from original recordings
+- **Narrator commentary** that isn't part of the original speech
+
+This tool automates the extraction of pure spoken content, making it easier to:
+- Create clean reading versions of oral histories
+- Prepare transcripts for linguistic analysis
+- Extract narrative content without editorial interference
+- Process large collections of interviews consistently
 
 ## Features
 
@@ -12,16 +27,123 @@ A web application for cleaning Yiddish transcripts by removing titles, headings,
 - 🎨 **Modern UI**: Clean, responsive web interface with drag-and-drop support
 - 🐳 **Docker Ready**: Easy deployment with Docker
 
-## What Gets Removed
+## Cleaning Rules for Yiddish Transcripts
 
-The cleaner removes:
-- Bracketed content: `[narrator notes]`, `(redactor notes)`
-- Headings with colons: `CHAPTER 1: Introduction`
-- Chapter/Section headings: `Chapter 1`, `Section 2`
-- Timestamps: `12:34:56`, `[12:34]`
-- Speaker labels: `Speaker 1:`, `Interviewer:`, `Narrator:`
-- Page numbers and separator lines
-- Special characters and excessive whitespace
+The application uses intelligent pattern matching to identify and remove non-transcript content. Here are the specific rules:
+
+### 1. **Bracketed Content** (Narrator/Redactor Notes)
+- **Pattern**: `[any content]` or `(any content)`
+- **Examples**: 
+  - `[Narrator: This is background information]`
+  - `(Redactor note: The speaker paused here)`
+  - `[laughing]`, `[inaudible]`
+- **Why**: These are editorial additions, not part of the original speech
+
+### 2. **Headings with Colons**
+- **Pattern**: `ALL CAPS TEXT: anything`
+- **Examples**: 
+  - `INTERVIEWER: What happened next?`
+  - `CHAPTER 1: Early Life`
+- **Why**: Structural markers added during transcription
+
+### 3. **Chapter and Section Headings**
+- **Pattern**: `Chapter N`, `Section N` (where N is a number)
+- **Examples**: 
+  - `Chapter 1`, `Chapter 1: Childhood`
+  - `Section 2`, `Section 2: Later Years`
+- **Why**: Editorial structure not part of original narrative
+
+### 4. **Timestamps**
+- **Pattern**: `HH:MM:SS` or `[MM:SS]`
+- **Examples**: 
+  - `[12:34]`, `[01:23:45]`
+  - `12:34:56`
+- **Why**: Technical markers from recording playback
+
+### 5. **Speaker Labels**
+- **Pattern**: Lines starting with speaker identifiers
+- **Examples**: 
+  - `Speaker 1: ...`, `Speaker 2: ...`
+  - `Interviewer: ...`
+  - `Narrator: ...`
+- **Why**: These label who is speaking but aren't part of the speech itself
+
+### 6. **Page Numbers and Separator Lines**
+- **Pattern**: Standalone numbers, "Page N", lines of dashes/equals
+- **Examples**: 
+  - `Page 2`, `Page 15`
+  - `-------------------`
+  - `===================`
+- **Why**: Document formatting elements
+
+### 7. **Special Characters**
+- **Pattern**: Zero-width spaces, Byte Order Marks (BOM)
+- **Why**: Hidden characters that can cause processing issues
+
+### 8. **Excessive Whitespace**
+- **Pattern**: Multiple consecutive blank lines, extra spaces
+- **Result**: Normalized to single spaces and maximum 2 newlines
+- **Why**: Clean, readable formatting
+
+### Example: Before and After Cleaning
+
+**Original Transcript:**
+```
+CHAPTER 1: INTRODUCTION
+
+[Narrator: The following is a transcript from an interview conducted in 2023]
+
+Interviewer: Tell me about your childhood.
+
+This is the actual transcript content that should remain. It tells the story 
+of growing up in a small village.
+
+[12:34] Another important memory from those days.
+
+(Redactor note: The interviewee became emotional at this point)
+
+The village had a beautiful synagogue where everyone would gather. We had 
+wonderful celebrations there.
+
+Speaker 1: What about the festivals?
+
+The festivals were the highlight of the year. Everyone would come together 
+and celebrate with traditional songs and dances.
+
+-------------------
+Page 2
+-------------------
+
+SECTION 2: LATER YEARS
+
+As I grew older, things began to change. [00:45:12] The community evolved 
+and adapted to modern times while maintaining our traditions.
+```
+
+**Cleaned Transcript:**
+```
+This is the actual transcript content that should remain. It tells the story 
+of growing up in a small village.
+
+Another important memory from those days.
+
+The village had a beautiful synagogue where everyone would gather. We had 
+wonderful celebrations there.
+
+The festivals were the highlight of the year. Everyone would come together 
+and celebrate with traditional songs and dances.
+
+As I grew older, things began to change. The community evolved and adapted 
+to modern times while maintaining our traditions.
+```
+
+**Statistics from this example:**
+- **Reduction**: 39.52%
+- **Words removed**: 46
+- **Lines removed**: 6
+- **Pure transcript preserved**: 80 words of actual spoken content
+
+The application shows you exactly what was removed in each category (bracketed notes, timestamps, headings, etc.) so you can verify the cleaning was done correctly.
 
 ## Installation
 
@@ -155,36 +277,363 @@ Example:
 (r'\[.*?\]', 'bracketed notes'),
 ```
 
-## Deployment Options
+## Deployment
 
-### Cloud Platforms
+This section provides detailed step-by-step instructions for deploying the Yiddish Transcript Cleaner to various platforms.
 
-**Heroku**
+### Local Deployment (Development & Testing)
+
+**Step 1: Install Python**
+- Ensure Python 3.8 or higher is installed: `python --version`
+
+**Step 2: Clone and Setup**
 ```bash
-heroku create your-app-name
+git clone https://github.com/Shloimy15e/clean-yiddish-transcripts.git
+cd clean-yiddish-transcripts
+pip install -r requirements.txt
+```
+
+**Step 3: Run the Application**
+```bash
+python app.py
+```
+
+**Step 4: Access the Application**
+- Open your browser and navigate to `http://localhost:5000`
+- The application will run on port 5000 by default
+
+**For Development with Debug Mode:**
+```bash
+FLASK_DEBUG=true python app.py
+```
+⚠️ **Warning**: Never use debug mode in production!
+
+---
+
+### Docker Deployment (Recommended for Production)
+
+Docker provides a consistent, isolated environment and is the recommended deployment method.
+
+**Step 1: Install Docker**
+- Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop/) for your operating system
+
+**Step 2: Build the Docker Image**
+```bash
+cd clean-yiddish-transcripts
+docker build -t yiddish-transcript-cleaner .
+```
+This creates a Docker image with all dependencies pre-installed.
+
+**Step 3: Run the Container**
+```bash
+docker run -d -p 5000:5000 --name yiddish-cleaner yiddish-transcript-cleaner
+```
+- `-d`: Run in detached mode (background)
+- `-p 5000:5000`: Map port 5000 from container to host
+- `--name`: Give the container a friendly name
+
+**Step 4: Verify It's Running**
+```bash
+docker ps
+```
+You should see your container listed as running.
+
+**Step 5: Access the Application**
+- Open your browser and navigate to `http://localhost:5000`
+
+**Managing the Container:**
+```bash
+# Stop the container
+docker stop yiddish-cleaner
+
+# Start the container
+docker start yiddish-cleaner
+
+# View logs
+docker logs yiddish-cleaner
+
+# Remove the container
+docker rm yiddish-cleaner
+```
+
+---
+
+### Heroku Deployment (Cloud Platform)
+
+Heroku is a platform-as-a-service (PaaS) that makes deployment simple.
+
+**Step 1: Install Heroku CLI**
+- Download from [Heroku CLI](https://devcenter.heroku.com/articles/heroku-cli)
+- Login: `heroku login`
+
+**Step 2: Prepare Your Repository**
+```bash
+cd clean-yiddish-transcripts
+git init  # if not already a git repository
+```
+
+**Step 3: Create a Heroku App**
+```bash
+heroku create your-unique-app-name
+```
+Replace `your-unique-app-name` with your desired app name (must be globally unique).
+
+**Step 4: Set Environment Variables**
+```bash
+heroku config:set FLASK_ENV=production
+heroku config:set SECRET_KEY=$(openssl rand -hex 32)
+```
+
+**Step 5: Deploy the Application**
+```bash
 git push heroku main
 ```
-
-**Google Cloud Run**
+If your branch is named differently (e.g., `master`), use:
 ```bash
-gcloud run deploy --source .
+git push heroku master
 ```
 
-**AWS Elastic Beanstalk**
+**Step 6: Open Your Application**
 ```bash
-eb init -p python-3.11 yiddish-transcript-cleaner
+heroku open
+```
+Your app will be available at `https://your-app-name.herokuapp.com`
+
+**Step 7: View Logs (if needed)**
+```bash
+heroku logs --tail
+```
+
+**Scaling (if needed):**
+```bash
+# Scale up to 2 dynos
+heroku ps:scale web=2
+
+# Scale down to 1 dyno
+heroku ps:scale web=1
+```
+
+---
+
+### Google Cloud Run Deployment
+
+Google Cloud Run is a serverless platform that automatically scales your application.
+
+**Step 1: Install Google Cloud SDK**
+- Download from [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
+- Initialize: `gcloud init`
+
+**Step 2: Authenticate and Set Project**
+```bash
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+```
+
+**Step 3: Enable Required APIs**
+```bash
+gcloud services enable run.googleapis.com
+gcloud services enable containerregistry.googleapis.com
+```
+
+**Step 4: Deploy from Source**
+```bash
+cd clean-yiddish-transcripts
+gcloud run deploy yiddish-transcript-cleaner \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+**Step 5: Access Your Application**
+After deployment completes, Cloud Run will provide a URL like:
+`https://yiddish-transcript-cleaner-xxxxx-uc.a.run.app`
+
+**Updating the Deployment:**
+```bash
+gcloud run deploy yiddish-transcript-cleaner --source .
+```
+
+**Viewing Logs:**
+```bash
+gcloud run services logs read yiddish-transcript-cleaner
+```
+
+---
+
+### AWS Elastic Beanstalk Deployment
+
+AWS Elastic Beanstalk provides a managed platform for web applications.
+
+**Step 1: Install EB CLI**
+```bash
+pip install awsebcli
+```
+
+**Step 2: Configure AWS Credentials**
+```bash
+aws configure
+```
+Enter your AWS Access Key ID and Secret Access Key.
+
+**Step 3: Initialize Elastic Beanstalk**
+```bash
+cd clean-yiddish-transcripts
+eb init -p python-3.11 yiddish-transcript-cleaner --region us-east-1
+```
+
+**Step 4: Create an Environment and Deploy**
+```bash
 eb create yiddish-transcript-env
+```
+This creates an environment and deploys your application.
+
+**Step 5: Open Your Application**
+```bash
+eb open
+```
+
+**Updating the Application:**
+```bash
 eb deploy
 ```
 
-### Environment Variables
+**Viewing Logs:**
+```bash
+eb logs
+```
 
-For production deployment, set:
-- `FLASK_ENV=production`
-- `SECRET_KEY=your-secret-key`
+**Terminating (when done):**
+```bash
+eb terminate yiddish-transcript-env
+```
 
-For development with debug mode:
-- `FLASK_DEBUG=true` (enables Flask debug mode, **never use in production**)
+---
+
+### VPS Deployment (Ubuntu Server)
+
+For deployment on a Virtual Private Server (VPS) like DigitalOcean, Linode, or AWS EC2.
+
+**Step 1: Connect to Your Server**
+```bash
+ssh user@your-server-ip
+```
+
+**Step 2: Update System and Install Dependencies**
+```bash
+sudo apt update
+sudo apt upgrade -y
+sudo apt install python3 python3-pip git nginx -y
+```
+
+**Step 3: Clone the Repository**
+```bash
+cd /var/www
+sudo git clone https://github.com/Shloimy15e/clean-yiddish-transcripts.git
+cd clean-yiddish-transcripts
+```
+
+**Step 4: Install Python Dependencies**
+```bash
+sudo pip3 install -r requirements.txt
+```
+
+**Step 5: Create a Systemd Service**
+```bash
+sudo nano /etc/systemd/system/yiddish-cleaner.service
+```
+
+Add the following content:
+```ini
+[Unit]
+Description=Yiddish Transcript Cleaner
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/clean-yiddish-transcripts
+Environment="PATH=/usr/bin"
+ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:8000 --workers 4 app:app
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Step 6: Start the Service**
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start yiddish-cleaner
+sudo systemctl enable yiddish-cleaner
+sudo systemctl status yiddish-cleaner
+```
+
+**Step 7: Configure Nginx as Reverse Proxy**
+```bash
+sudo nano /etc/nginx/sites-available/yiddish-cleaner
+```
+
+Add:
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+**Step 8: Enable the Site**
+```bash
+sudo ln -s /etc/nginx/sites-available/yiddish-cleaner /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+**Step 9: Setup SSL (Optional but Recommended)**
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d your-domain.com
+```
+
+Your application is now accessible at `http://your-domain.com` (or `https://` if SSL is configured).
+
+---
+
+### Environment Variables for Production
+
+For all deployment methods, set these environment variables:
+
+```bash
+FLASK_ENV=production
+SECRET_KEY=your-secret-key-here
+```
+
+Generate a secure secret key:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+**Never set `FLASK_DEBUG=true` in production!**
+
+---
+
+### Deployment Checklist
+
+Before deploying to production:
+
+- [ ] Set `FLASK_ENV=production`
+- [ ] Set a secure `SECRET_KEY`
+- [ ] Ensure `FLASK_DEBUG` is not set (or set to `false`)
+- [ ] Configure HTTPS/SSL for secure connections
+- [ ] Set up regular backups (if storing data)
+- [ ] Configure firewall rules appropriately
+- [ ] Monitor application logs
+- [ ] Set up health check monitoring
 
 ## Security Notes
 
