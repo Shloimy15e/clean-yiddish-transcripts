@@ -4,41 +4,84 @@ Removes titles, headings, narrator notes, redactor notes, etc.
 """
 import re
 
+# Default cleaning profile
+DEFAULT_PROFILE = 'titles_and_parentheses'
+
 
 class TranscriptCleaner:
     """Cleans Yiddish transcripts by removing non-transcript content."""
     
     def __init__(self):
-        # Patterns for content to remove
-        self.removal_patterns = [
-            # Bracketed content (narrator/redactor notes)
-            (r'\[.*?\]', 'bracketed notes'),
-            (r'\(.*?\)', 'parenthetical notes'),
-            
-            # Common heading patterns
-            (r'^[A-Z\s]+:.*$', 'headings with colon'),
-            (r'^Chapter \d+.*$', 'chapter headings'),
-            (r'^Section \d+.*$', 'section headings'),
-            
-            # Time stamps
-            (r'\d{1,2}:\d{2}:\d{2}', 'timestamps'),
-            (r'\[\d{1,2}:\d{2}\]', 'bracketed timestamps'),
-            
-            # Speaker labels (common in transcripts)
-            (r'^Speaker \d+:.*$', 'speaker labels'),
-            (r'^Interviewer:.*$', 'interviewer labels'),
-            (r'^Narrator:.*$', 'narrator labels'),
-            
-            # Multiple consecutive newlines (leave at most 2)
-            (r'\n{3,}', 'excessive newlines'),
-            
-            # Lines with only special characters or numbers
-            (r'^[\d\s\-_=]+$', 'separator lines'),
-            
-            # Page numbers
-            (r'^\s*Page \d+\s*$', 'page numbers'),
-            (r'^\s*\d+\s*$', 'standalone numbers'),
-        ]
+        # Define cleaning profiles
+        self.profiles = {
+            'titles_only': {
+                'description': 'Removes only titles, headings, and speaker labels',
+                'patterns': [
+                    # Common heading patterns
+                    (r'^[A-Z\s]+:.*$', 'headings with colon'),
+                    (r'^Chapter \d+.*$', 'chapter headings'),
+                    (r'^Section \d+.*$', 'section headings'),
+                    
+                    # Time stamps
+                    (r'\d{1,2}:\d{2}:\d{2}', 'timestamps'),
+                    (r'\[\d{1,2}:\d{2}\]', 'bracketed timestamps'),
+                    
+                    # Speaker labels (common in transcripts)
+                    (r'^Speaker \d+:.*$', 'speaker labels'),
+                    (r'^Interviewer:.*$', 'interviewer labels'),
+                    (r'^Narrator:.*$', 'narrator labels'),
+                    
+                    # Multiple consecutive newlines (leave at most 2)
+                    (r'\n{3,}', 'excessive newlines'),
+                    
+                    # Lines with only special characters or numbers
+                    (r'^[\d\s\-_=]+$', 'separator lines'),
+                    
+                    # Page numbers
+                    (r'^\s*Page \d+\s*$', 'page numbers'),
+                    (r'^\s*\d+\s*$', 'standalone numbers'),
+                ]
+            },
+            'titles_and_parentheses': {
+                'description': 'Removes titles/headings AND all bracketed/parenthetical content',
+                'patterns': [
+                    # Bracketed content followed by parenthetical content (special case first)
+                    # This must be processed FIRST before individual patterns remove parts of it
+                    (r'\[.*?\]\s*\(.*?\)', 'brackets followed by parentheses'),
+                    
+                    # Bracketed content (narrator/redactor notes)
+                    (r'\[.*?\]', 'bracketed notes'),
+                    (r'\(.*?\)', 'parenthetical notes'),
+                    
+                    # Common heading patterns
+                    (r'^[A-Z\s]+:.*$', 'headings with colon'),
+                    (r'^Chapter \d+.*$', 'chapter headings'),
+                    (r'^Section \d+.*$', 'section headings'),
+                    
+                    # Time stamps
+                    (r'\d{1,2}:\d{2}:\d{2}', 'timestamps'),
+                    (r'\[\d{1,2}:\d{2}\]', 'bracketed timestamps'),
+                    
+                    # Speaker labels (common in transcripts)
+                    (r'^Speaker \d+:.*$', 'speaker labels'),
+                    (r'^Interviewer:.*$', 'interviewer labels'),
+                    (r'^Narrator:.*$', 'narrator labels'),
+                    
+                    # Multiple consecutive newlines (leave at most 2)
+                    (r'\n{3,}', 'excessive newlines'),
+                    
+                    # Lines with only special characters or numbers
+                    (r'^[\d\s\-_=]+$', 'separator lines'),
+                    
+                    # Page numbers
+                    (r'^\s*Page \d+\s*$', 'page numbers'),
+                    (r'^\s*\d+\s*$', 'standalone numbers'),
+                ]
+            }
+        }
+        
+        # Default profile for backwards compatibility
+        self.removal_patterns = self.profiles['titles_and_parentheses']['patterns']
         
         # Characters to remove
         self.chars_to_remove = [
@@ -46,18 +89,44 @@ class TranscriptCleaner:
             '\ufeff',  # BOM
         ]
     
-    def clean_text(self, text):
+    def get_available_profiles(self):
+        """
+        Get list of available cleaning profiles.
+        
+        Returns:
+            dict: Dictionary of profile names to their descriptions
+        """
+        return {
+            name: profile['description'] 
+            for name, profile in self.profiles.items()
+        }
+    
+    def clean_text(self, text, profile=None):
         """
         Clean the transcript text and return both cleaned text and removed content.
         
         Args:
             text: The original transcript text
+            profile: The cleaning profile to use (default: DEFAULT_PROFILE constant)
+                     Available profiles: 'titles_only', 'titles_and_parentheses'
             
         Returns:
-            tuple: (cleaned_text, removed_items)
+            tuple: (cleaned_text, removed_items, profile_name)
                 - cleaned_text: The text after cleaning
                 - removed_items: List of dicts with 'pattern', 'matches', and 'count'
+                - profile_name: The name of the profile used
         """
+        # Use default profile if none specified
+        if profile is None:
+            profile = DEFAULT_PROFILE
+            
+        # Validate profile
+        if profile not in self.profiles:
+            profile = DEFAULT_PROFILE  # Fallback to default
+        
+        # Get patterns for the selected profile
+        removal_patterns = self.profiles[profile]['patterns']
+        
         removed_items = []
         cleaned = text
         
@@ -73,7 +142,7 @@ class TranscriptCleaner:
                 })
         
         # Apply regex patterns
-        for pattern, description in self.removal_patterns:
+        for pattern, description in removal_patterns:
             matches = re.findall(pattern, cleaned, re.MULTILINE | re.IGNORECASE)
             if matches:
                 # Store what was removed
@@ -95,7 +164,7 @@ class TranscriptCleaner:
         cleaned = re.sub(r' \n', '\n', cleaned)  # Space before newline
         cleaned = cleaned.strip()
         
-        return cleaned, removed_items
+        return cleaned, removed_items, profile
     
     def get_statistics(self, original_text, cleaned_text):
         """

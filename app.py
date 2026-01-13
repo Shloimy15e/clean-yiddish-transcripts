@@ -7,6 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from drive_downloader import DriveDownloader
+from cleaner import TranscriptCleaner, DEFAULT_PROFILE
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -20,6 +21,18 @@ os.makedirs(app.config['TEMP_FOLDER'], exist_ok=True)
 
 processor = DocumentProcessor()
 
+# Cache for cleaning profiles to avoid repeated instantiation
+_cached_profiles = None
+
+
+def get_cleaner_profiles():
+    """Get available cleaning profiles (cached)."""
+    global _cached_profiles
+    if _cached_profiles is None:
+        cleaner = TranscriptCleaner()
+        _cached_profiles = cleaner.get_available_profiles()
+    return _cached_profiles
+
 
 def allowed_file(filename):
     """Check if file has allowed extension."""
@@ -31,6 +44,13 @@ def allowed_file(filename):
 def index():
     """Render the main page."""
     return render_template('index.html')
+
+
+@app.route('/profiles', methods=['GET'])
+def get_profiles():
+    """Get available cleaning profiles."""
+    profiles = get_cleaner_profiles()
+    return jsonify(profiles)
 
 
 @app.route('/upload', methods=['POST'])
@@ -48,13 +68,16 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload a .docx or .doc file'}), 400
         
+        # Get the selected profile from the form data (use default if not specified)
+        profile = request.form.get('profile', DEFAULT_PROFILE)
+        
         # Save uploaded file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Process the document
-        result = processor.process_document(filepath, filename)
+        # Process the document with selected profile
+        result = processor.process_document(filepath, filename, profile)
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -71,6 +94,7 @@ def process_drive():
     try:
         data = request.get_json()
         drive_url = data.get('drive_url', '').strip()
+        profile = data.get('profile', DEFAULT_PROFILE)
         
         if not drive_url:
             return jsonify({'error': 'No Google Drive URL provided'}), 400
@@ -93,7 +117,7 @@ def process_drive():
         results = []
         for file_info in downloaded_files:
             try:
-                result = processor.process_document(file_info['path'], file_info['name'])
+                result = processor.process_document(file_info['path'], file_info['name'], profile)
                 results.append(result)
                 # Clean up temp file
                 os.remove(file_info['path'])
