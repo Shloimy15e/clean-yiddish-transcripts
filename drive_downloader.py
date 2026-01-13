@@ -303,7 +303,7 @@ class DriveDownloader:
                     }]
                 elif mime_type == 'application/vnd.google-apps.folder':
                     # It's actually a folder, process as folder
-                    return self.download_folder(file_id, output_dir)
+                    return self.download_folder(folder_id, output_dir)
                 else:
                     raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
             except Exception as e:
@@ -324,6 +324,17 @@ class DriveDownloader:
                     fileId=folder_id,
                     fields='id, name, mimeType'
                 ).execute()
+                
+                # Validate file type
+                supported_types = [
+                    'application/vnd.google-apps.document',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/msword'
+                ]
+                
+                mime_type = file_metadata.get('mimeType')
+                if mime_type not in supported_types:
+                    raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
                 
                 file_path = self.download_document(
                     file_metadata['id'],
