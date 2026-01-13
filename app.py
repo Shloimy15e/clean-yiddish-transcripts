@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from drive_downloader import DriveDownloader
-from cleaner import TranscriptCleaner, DEFAULT_PROFILE
+from cleaner import TranscriptCleaner
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -53,6 +53,21 @@ def get_profiles():
     return jsonify(profiles)
 
 
+@app.route('/processors', methods=['GET'])
+def get_processors():
+    """Get available processing plugins."""
+    cleaner = TranscriptCleaner()
+    processors = cleaner.get_available_processors()
+    return jsonify(processors)
+
+
+@app.route('/formats', methods=['GET'])
+def get_formats():
+    """Get available output formats."""
+    formats = processor.get_available_formats()
+    return jsonify(formats)
+
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload and processing."""
@@ -68,16 +83,25 @@ def upload_file():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Invalid file type. Please upload a .docx or .doc file'}), 400
         
-        # Get the selected profile from the form data (use default if not specified)
-        profile = request.form.get('profile', DEFAULT_PROFILE)
+        # Get processors list from form data (comma-separated or JSON array)
+        processors_str = request.form.get('processors', '')
+        if processors_str:
+            # Parse as JSON array or comma-separated
+            import json
+            try:
+                processors_list = json.loads(processors_str)
+            except json.JSONDecodeError:
+                processors_list = [p.strip() for p in processors_str.split(',') if p.strip()]
+        else:
+            processors_list = None  # Will use default
         
         # Save uploaded file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Process the document with selected profile
-        result = processor.process_document(filepath, filename, profile)
+        # Process the document with selected processors
+        result = processor.process_document(filepath, filename, processors=processors_list)
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -94,7 +118,7 @@ def process_drive():
     try:
         data = request.get_json()
         drive_url = data.get('drive_url', '').strip()
-        profile = data.get('profile', DEFAULT_PROFILE)
+        processors_list = data.get('processors', None)  # List of processor names
         
         if not drive_url:
             return jsonify({'error': 'No Google Drive URL provided'}), 400
@@ -117,7 +141,7 @@ def process_drive():
         results = []
         for file_info in downloaded_files:
             try:
-                result = processor.process_document(file_info['path'], file_info['name'], profile)
+                result = processor.process_document(file_info['path'], file_info['name'], processors=processors_list)
                 results.append(result)
                 # Clean up temp file
                 os.remove(file_info['path'])
@@ -145,20 +169,38 @@ def process_drive():
 
 @app.route('/download-cleaned', methods=['POST'])
 def download_cleaned():
-    """Generate and download cleaned document."""
+    """Generate and download cleaned document in specified format."""
     try:
         data = request.get_json()
         cleaned_text = data.get('cleaned_text', '')
-        filename = data.get('filename', 'cleaned_document.docx')
+        original_filename = data.get('filename', 'cleaned_document')
+        format_name = data.get('format', 'docx')  # Default to docx
+        context = data.get('context', None)  # Optional context for formatting
         
-        # Ensure filename ends with .docx
-        filename = filename.rsplit('.', 1)[0] + '_cleaned.docx'
+        # Get format info
+        formats = processor.get_available_formats()
+        format_info = formats.get(format_name, formats.get('docx', {}))
+        extension = format_info.get('extension', '.docx')
+        mime_type = format_info.get('mime_type', 'application/octet-stream')
         
-        # Save cleaned document
-        output_path = os.path.join(app.config['TEMP_FOLDER'], filename)
-        processor.save_cleaned_document(cleaned_text, output_path)
+        # Build output filename
+        base_name = original_filename.rsplit('.', 1)[0]
+        output_filename = f"{base_name}_cleaned{extension}"
         
-        return send_file(output_path, as_attachment=True, download_name=filename)
+        # Get cleaned document as bytes
+        file_bytes = processor.get_cleaned_bytes(cleaned_text, format_name, context)
+        
+        # Create a BytesIO object for sending
+        from io import BytesIO
+        buffer = BytesIO(file_bytes)
+        buffer.seek(0)
+        
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=output_filename,
+            mimetype=mime_type
+        )
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -173,7 +215,6 @@ def health():
 if __name__ == '__main__':
     # Only enable debug mode if explicitly set via environment variable
     # In production, use a WSGI server like gunicorn instead
-    import os
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.environ.get('PORT', 5050))
     app.run(host='0.0.0.0', port=port, debug=debug_mode)

@@ -7,10 +7,36 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    animation: {
+                        'spin-slow': 'spin 1.5s linear infinite',
+                        'fade-in': 'fadeIn 0.3s ease-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulseSoft {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         .spinner {
             animation: spin 1s linear infinite;
@@ -42,9 +68,169 @@
             padding: 0 2px;
             border-radius: 2px;
         }
+        
+        /* Custom checkbox styling */
+        .processor-item {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+        }
+        .processor-item input[type="checkbox"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+            height: 0;
+            width: 0;
+        }
+        .processor-item .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.875rem;
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #374151;
+        }
+        .processor-item:hover .checkbox-label {
+            border-color: #93c5fd;
+            background: #f0f9ff;
+        }
+        .processor-item input[type="checkbox"]:checked + .checkbox-label {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+        }
+        .processor-item input[type="checkbox"]:focus + .checkbox-label {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .processor-item .checkmark {
+            width: 1.125rem;
+            height: 1.125rem;
+            border: 2px solid #d1d5db;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .processor-item input[type="checkbox"]:checked + .checkbox-label .checkmark {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .processor-item .checkmark svg {
+            width: 0.75rem;
+            height: 0.75rem;
+            stroke: white;
+            stroke-width: 3;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.15s ease;
+        }
+        .processor-item input[type="checkbox"]:checked + .checkbox-label .checkmark svg {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Glass morphism card */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Tab styling */
+        .tab-btn {
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: transparent;
+            border-radius: 3px 3px 0 0;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active::after {
+            background: #3b82f6;
+        }
+        
+        /* Upload area improvements */
+        .upload-zone {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover {
+            background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.2);
+        }
+        .upload-zone.drag-over {
+            background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+            border-color: #2563eb;
+            transform: scale(1.02);
+        }
+        
+        /* Button improvements */
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4);
+        }
+        .btn-primary:active:not(:disabled) {
+            transform: translateY(0);
+        }
+        
+        /* Result card animations */
+        .result-card {
+            animation: slideUp 0.4s ease-out;
+        }
+        
+        /* Stats card hover */
+        .stat-item {
+            transition: all 0.2s ease;
+        }
+        .stat-item:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Scrollbar styling */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Background pattern */
+        .bg-pattern {
+            background-color: #2563eb;
+            background-image: 
+                radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(255,255,255,0.05) 0%, transparent 50%);
+        }
     </style>
 </head>
-<body class="bg-blue-600 min-h-screen p-5 font-sans">
+<body class="bg-pattern min-h-screen p-4 sm:p-6 lg:p-8 font-sans">
     <!-- SVG Icon Definitions -->
     <svg style="display: none;" xmlns="http://www.w3.org/2000/svg">
         <symbol id="icon-language" viewBox="0 0 640 512">
@@ -74,169 +260,306 @@
         <symbol id="icon-check" viewBox="0 0 448 512">
             <path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/>
         </symbol>
+        <symbol id="icon-sparkles" viewBox="0 0 512 512">
+            <path d="M327.5 85.2c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L384 128l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L448 128l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L448 64 426.8 7.5C425.1 3 420.8 0 416 0s-9.1 3-10.8 7.5L384 64 327.5 85.2zM205.1 73.3c-2.6-5.7-8.3-9.3-14.5-9.3s-11.9 3.6-14.5 9.3L145.6 136 73.3 166.6c-5.7 2.6-9.3 8.3-9.3 14.5s3.6 11.9 9.3 14.5l72.3 30.5 30.6 72.3c2.6 5.7 8.3 9.3 14.5 9.3s11.9-3.6 14.5-9.3l30.6-72.3 72.3-30.6c5.7-2.6 9.3-8.3 9.3-14.5s-3.6-11.9-9.3-14.5L235.7 136 205.1 73.3zM384 384l-56.5 21.2c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L384 448l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L448 448l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L448 384l-21.2-56.5c-1.7-4.5-6-7.5-10.8-7.5s-9.1 3-10.8 7.5L384 384z"/>
+        </symbol>
     </svg>
     
     <div class="max-w-5xl mx-auto">
-        <header class="text-center text-white mb-10">
-            <h1 class="text-4xl font-bold mb-2 flex items-center justify-center gap-3">
-                <span class="icon text-3xl"><svg><use href="#icon-language"/></svg></span>
+        <!-- Header -->
+        <header class="text-center text-white mb-8 sm:mb-12">
+            <div class="inline-flex items-center justify-center gap-3 mb-4">
+                <div class="p-3 bg-white/20 rounded-2xl backdrop-blur-sm">
+                    <span class="icon text-4xl"><svg><use href="#icon-language"/></svg></span>
+                </div>
+            </div>
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 tracking-tight">
                 Yiddish Transcript Cleaner
             </h1>
-            <p class="text-lg opacity-90">Remove titles, headings, and notes from your transcripts</p>
+            <p class="text-base sm:text-lg text-blue-100 max-w-md mx-auto">
+                Remove titles, headings, and notes from your transcripts with ease
+            </p>
         </header>
 
-        <div class="bg-white rounded-xl p-8 shadow-3xl mb-5">
-            <div class="flex gap-2 mb-8 border-b-2 border-gray-200">
-                <button class="tab px-6 py-3 border-b-3 border-transparent text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600 active border-b-blue-600 text-blue-600 font-semibold" data-tab="upload">
-                    <span class="icon"><svg><use href="#icon-upload"/></svg></span> Upload File
+        <!-- Main Card -->
+        <div class="glass-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 lg:p-10 mb-6">
+            <!-- Tabs -->
+            <div class="flex gap-1 mb-8 border-b-2 border-gray-100 -mx-2">
+                <button class="tab-btn active px-4 sm:px-6 py-3 text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600 rounded-t-lg" data-tab="upload">
+                    <span class="icon text-lg"><svg><use href="#icon-upload"/></svg></span>
+                    <span class="hidden sm:inline">Upload File</span>
+                    <span class="sm:hidden">Upload</span>
                 </button>
-                <button class="tab px-6 py-3 border-b-3 border-transparent text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600" data-tab="drive">
-                    <span class="icon"><svg><use href="#icon-drive"/></svg></span> Google Drive
+                <button class="tab-btn px-4 sm:px-6 py-3 text-gray-500 font-medium flex items-center gap-2 transition-all hover:text-blue-600 rounded-t-lg" data-tab="drive">
+                    <span class="icon text-lg"><svg><use href="#icon-drive"/></svg></span>
+                    <span class="hidden sm:inline">Google Drive</span>
+                    <span class="sm:hidden">Drive</span>
                 </button>
             </div>
 
+            <!-- Upload Tab -->
             <div id="upload-tab" class="tab-content">
-                <div class="mb-5">
-                    <label for="profileSelectUpload" class="block mb-2 font-semibold text-gray-800 flex items-center gap-2">
-                        <span class="icon"><svg><use href="#icon-sliders"/></svg></span> Cleaning Profile
+                <!-- Processor Selection -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 mb-3 font-semibold text-gray-800">
+                        <span class="icon text-blue-600"><svg><use href="#icon-sliders"/></svg></span>
+                        <span>Processing Plugins</span>
+                        <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" id="selectedCountUpload">0 selected</span>
                     </label>
-                    <select id="profileSelectUpload" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600 cursor-pointer"></select>
-                    <div class="text-sm text-gray-500 mt-1 italic" id="profileInfoUpload" aria-live="polite">Loading profile descriptions...</div>
+                    <div id="processorCheckboxesUpload" class="flex flex-wrap gap-2 sm:gap-3 p-4 border-2 border-gray-100 rounded-xl bg-gradient-to-br from-gray-50 to-white">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 animate-pulse">
+                            <div class="w-4 h-4 border-2 border-gray-300 rounded-full border-t-blue-500 spinner"></div>
+                            <span>Loading processors...</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-3 text-sm">
+                        <button type="button" onclick="selectAllProcessors('Upload')" class="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Select All
+                        </button>
+                        <span class="text-gray-300">|</span>
+                        <button type="button" onclick="deselectAllProcessors('Upload')" class="text-gray-500 hover:text-gray-700 font-medium transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Clear All
+                        </button>
+                    </div>
                 </div>
-                <div id="uploadArea" class="border-3 border-dashed border-blue-600 rounded-lg p-10 text-center cursor-pointer transition-all hover:bg-blue-50 mb-5">
-                    <div class="text-5xl text-blue-600 mb-3">
+
+                <!-- Upload Area -->
+                <div id="uploadArea" class="upload-zone border-3 border-dashed border-blue-300 rounded-2xl p-8 sm:p-12 text-center cursor-pointer mb-6">
+                    <div class="text-6xl text-blue-500 mb-4">
                         <span class="icon"><svg><use href="#icon-cloud-upload"/></svg></span>
                     </div>
-                    <h3 class="text-lg font-semibold text-gray-800 mb-1">Drop your Word document here</h3>
-                    <p class="text-gray-500">or click to browse</p>
+                    <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-2">Drop your Word document here</h3>
+                    <p class="text-gray-500 mb-4">or click to browse your files</p>
+                    <p class="text-xs text-gray-400">Supports .doc and .docx files</p>
                     <input type="file" id="fileInput" accept=".doc,.docx" class="hidden">
                 </div>
-                <button class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold transition-all hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none" id="processBtn" disabled>
-                    Process Document
+
+                <!-- Process Button -->
+                <button class="btn-primary w-full sm:w-auto px-8 py-3.5 text-white rounded-xl font-semibold text-base disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2" id="processBtn" disabled>
+                    <span class="icon"><svg><use href="#icon-sparkles"/></svg></span>
+                    <span>Process Document</span>
                 </button>
             </div>
 
+            <!-- Drive Tab -->
             <div id="drive-tab" class="tab-content hidden">
-                <div class="mb-5">
-                    <label for="profileSelectDrive" class="block mb-2 font-semibold text-gray-800 flex items-center gap-2">
-                        <span class="icon"><svg><use href="#icon-sliders"/></svg></span> Cleaning Profile
+                <!-- Processor Selection -->
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 mb-3 font-semibold text-gray-800">
+                        <span class="icon text-blue-600"><svg><use href="#icon-sliders"/></svg></span>
+                        <span>Processing Plugins</span>
+                        <span class="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full" id="selectedCountDrive">0 selected</span>
                     </label>
-                    <select id="profileSelectDrive" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600 cursor-pointer"></select>
-                    <div class="text-sm text-gray-500 mt-1 italic" id="profileInfoDrive" aria-live="polite">Loading profile descriptions...</div>
+                    <div id="processorCheckboxesDrive" class="flex flex-wrap gap-2 sm:gap-3 p-4 border-2 border-gray-100 rounded-xl bg-gradient-to-br from-gray-50 to-white">
+                        <div class="flex items-center gap-2 text-sm text-gray-500 animate-pulse">
+                            <div class="w-4 h-4 border-2 border-gray-300 rounded-full border-t-blue-500 spinner"></div>
+                            <span>Loading processors...</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 mt-3 text-sm">
+                        <button type="button" onclick="selectAllProcessors('Drive')" class="text-blue-600 hover:text-blue-800 font-medium transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Select All
+                        </button>
+                        <span class="text-gray-300">|</span>
+                        <button type="button" onclick="deselectAllProcessors('Drive')" class="text-gray-500 hover:text-gray-700 font-medium transition-colors flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Clear All
+                        </button>
+                    </div>
                 </div>
-                <div class="mb-5">
+
+                <!-- Drive URL Input -->
+                <div class="mb-6">
                     <label for="driveUrl" class="block mb-2 font-semibold text-gray-800">Google Drive Folder URL</label>
-                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/drive/folders/..." class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-colors focus:outline-none focus:border-blue-600">
+                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/drive/folders/..." 
+                           class="w-full p-4 border-2 border-gray-200 rounded-xl text-base transition-all focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                 </div>
-                <button class="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold transition-all hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg" id="processDriveBtn">
-                    Process Drive Folder
+
+                <!-- Process Button -->
+                <button class="btn-primary w-full sm:w-auto px-8 py-3.5 text-white rounded-xl font-semibold text-base flex items-center justify-center gap-2" id="processDriveBtn">
+                    <span class="icon"><svg><use href="#icon-sparkles"/></svg></span>
+                    <span>Process Drive Folder</span>
                 </button>
-                <p class="mt-4 text-gray-500 text-sm">
-                    <strong>Note:</strong> Google Drive integration requires additional setup. See README for instructions.
-                </p>
+
+                <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-amber-800 text-sm flex items-start gap-2">
+                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        <span><strong>Note:</strong> Google Drive integration requires additional setup. See README for instructions.</span>
+                    </p>
+                </div>
             </div>
 
-            <div class="hidden text-center py-10" id="loading">
-                <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-600 rounded-full spinner mx-auto mb-5"></div>
-                <p class="text-gray-600">Processing your documents...</p>
+            <!-- Loading State -->
+            <div class="hidden text-center py-16" id="loading">
+                <div class="relative inline-block">
+                    <div class="w-16 h-16 border-4 border-blue-100 rounded-full"></div>
+                    <div class="w-16 h-16 border-4 border-transparent border-t-blue-600 rounded-full spinner absolute top-0 left-0"></div>
+                </div>
+                <p class="text-gray-600 mt-6 font-medium">Processing your documents...</p>
+                <p class="text-gray-400 text-sm mt-2">This may take a moment</p>
             </div>
 
-            <div class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded text-red-700 mt-5" id="error"></div>
+            <!-- Error State -->
+            <div class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mt-6" id="error">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-red-700" id="errorText"></p>
+                </div>
+            </div>
 
+            <!-- Results -->
             <div class="hidden mt-8" id="results"></div>
         </div>
+
+        <!-- Footer -->
+        <footer class="text-center text-blue-200 text-sm pb-4">
+            <p>Made with care for Yiddish document processing</p>
+        </footer>
     </div>
 
     <script>
-        let profileDescriptions = {};
-        let profileOptions = [];
+        let availableProcessors = {};
+        let availableFormats = {};
 
-        async function loadProfiles() {
+        // Default processors to check
+        const defaultProcessors = ['special_chars', 'seif_marker', 'title_style', 'regex', 'whitespace'];
+
+        async function loadProcessors() {
             try {
-                const response = await fetch('/profiles');
+                const response = await fetch('/processors');
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
-                profileDescriptions = await response.json();
-                
-                const profileKeys = Object.keys(profileDescriptions).sort();
-                profileOptions = profileKeys.map(key => ({
-                    value: key,
-                    label: profileDescriptions[key].title || formatProfileName(key),
-                    description: profileDescriptions[key].description || ''
-                }));
-                
-                populateDropdowns();
-                updateProfileInfo();
+                availableProcessors = await response.json();
+                populateProcessorCheckboxes('Upload');
+                populateProcessorCheckboxes('Drive');
             } catch (error) {
-                console.error('Failed to load profiles from API:', error.message || error);
-                const uploadInfo = document.getElementById('profileInfoUpload');
-                const driveInfo = document.getElementById('profileInfoDrive');
-                if (uploadInfo) uploadInfo.textContent = 'Unable to load profiles. Please refresh the page.';
-                if (driveInfo) driveInfo.textContent = 'Unable to load profiles. Please refresh the page.';
+                console.error('Failed to load processors:', error.message || error);
+                const errorHtml = `
+                    <div class="flex items-center gap-2 text-sm text-red-500">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <span>Unable to load processors. Please refresh the page.</span>
+                    </div>
+                `;
+                document.getElementById('processorCheckboxesUpload').innerHTML = errorHtml;
+                document.getElementById('processorCheckboxesDrive').innerHTML = errorHtml;
             }
         }
         
-        function populateDropdowns() {
-            const uploadSelect = document.getElementById('profileSelectUpload');
-            const driveSelect = document.getElementById('profileSelectDrive');
-            const defaultProfile = 'titles_and_parentheses';
+        function populateProcessorCheckboxes(suffix) {
+            const container = document.getElementById('processorCheckboxes' + suffix);
+            if (!container) return;
             
-            [uploadSelect, driveSelect].forEach(select => {
-                if (select) {
-                    select.innerHTML = '';
-                    profileOptions.forEach(profile => {
-                        const option = document.createElement('option');
-                        option.value = profile.value;
-                        option.textContent = profile.label;
-                        if (profile.value === defaultProfile) {
-                            option.selected = true;
-                        }
-                        select.appendChild(option);
+            container.innerHTML = '';
+            
+            for (const [name, info] of Object.entries(availableProcessors)) {
+                const isDefault = defaultProcessors.includes(name);
+                
+                const wrapper = document.createElement('label');
+                wrapper.className = 'processor-item';
+                
+                wrapper.innerHTML = `
+                    <input type="checkbox" name="processors-${suffix}" value="${name}" ${isDefault ? 'checked' : ''}>
+                    <span class="checkbox-label">
+                        <span class="checkmark">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </span>
+                        <span>${formatProcessorName(name)}</span>
+                    </span>
+                `;
+                
+                // Add change listener for count update
+                const checkbox = wrapper.querySelector('input');
+                checkbox.addEventListener('change', () => updateSelectedCount(suffix));
+                
+                // Add tooltip for description
+                if (info.description) {
+                    const label = wrapper.querySelector('.checkbox-label');
+                    tippy(label, {
+                        content: info.description,
+                        placement: 'top',
+                        arrow: true,
+                        theme: 'light-border',
+                        animation: 'fade',
+                        delay: [200, 0],
                     });
                 }
-            });
+                
+                container.appendChild(wrapper);
+            }
+            
+            updateSelectedCount(suffix);
         }
         
-        function formatProfileName(name) {
+        function updateSelectedCount(suffix) {
+            const count = document.querySelectorAll(`input[name="processors-${suffix}"]:checked`).length;
+            const total = document.querySelectorAll(`input[name="processors-${suffix}"]`).length;
+            const countEl = document.getElementById('selectedCount' + suffix);
+            if (countEl) {
+                countEl.textContent = `${count} of ${total} selected`;
+            }
+        }
+        
+        function formatProcessorName(name) {
             return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
         }
         
-        function getProfileDisplayName(name) {
-            const profile = profileOptions.find(p => p.value === name);
-            return profile ? profile.label : formatProfileName(name);
+        function getSelectedProcessors(suffix) {
+            const checkboxes = document.querySelectorAll(`input[name="processors-${suffix}"]:checked`);
+            return Array.from(checkboxes).map(cb => cb.value);
         }
         
-        function updateProfileInfo() {
-            const uploadSelect = document.getElementById('profileSelectUpload');
-            const driveSelect = document.getElementById('profileSelectDrive');
-            const uploadInfo = document.getElementById('profileInfoUpload');
-            const driveInfo = document.getElementById('profileInfoDrive');
-            
-            if (uploadSelect && uploadInfo) {
-                const profile = profileOptions.find(p => p.value === uploadSelect.value);
-                uploadInfo.textContent = profile ? profile.description : '';
-            }
-            
-            if (driveSelect && driveInfo) {
-                const profile = profileOptions.find(p => p.value === driveSelect.value);
-                driveInfo.textContent = profile ? profile.description : '';
+        function selectAllProcessors(suffix) {
+            document.querySelectorAll(`input[name="processors-${suffix}"]`).forEach(cb => cb.checked = true);
+            updateSelectedCount(suffix);
+        }
+        
+        function deselectAllProcessors(suffix) {
+            document.querySelectorAll(`input[name="processors-${suffix}"]`).forEach(cb => cb.checked = false);
+            updateSelectedCount(suffix);
+        }
+
+        async function loadFormats() {
+            try {
+                const response = await fetch('/formats');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                availableFormats = await response.json();
+                console.log('Loaded formats:', availableFormats);
+            } catch (error) {
+                console.error('Failed to load formats:', error.message || error);
+                // Default formats if API fails
+                availableFormats = {
+                    'docx': { name: 'docx', title: 'Word Document', extension: '.docx' },
+                    'txt': { name: 'txt', title: 'Plain Text', extension: '.txt' }
+                };
             }
         }
 
-        document.getElementById('profileSelectUpload')?.addEventListener('change', updateProfileInfo);
-        document.getElementById('profileSelectDrive')?.addEventListener('change', updateProfileInfo);
-
-        loadProfiles();
+        // Load on page start
+        loadProcessors();
+        loadFormats();
 
         // Tab switching
-        document.querySelectorAll('.tab').forEach(tab => {
+        document.querySelectorAll('.tab-btn').forEach(tab => {
             tab.addEventListener('click', () => {
-                document.querySelectorAll('.tab').forEach(t => {
-                    t.classList.remove('active', 'border-b-blue-600', 'text-blue-600', 'font-semibold');
+                document.querySelectorAll('.tab-btn').forEach(t => {
+                    t.classList.remove('active', 'text-blue-600', 'font-semibold');
                     t.classList.add('text-gray-500');
                 });
-                tab.classList.add('active', 'border-b-blue-600', 'text-blue-600', 'font-semibold');
+                tab.classList.add('active', 'text-blue-600', 'font-semibold');
                 tab.classList.remove('text-gray-500');
                 
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
@@ -254,16 +577,16 @@
         
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
-            uploadArea.classList.add('bg-blue-100', 'border-blue-700');
+            uploadArea.classList.add('drag-over');
         });
         
         uploadArea.addEventListener('dragleave', () => {
-            uploadArea.classList.remove('bg-blue-100', 'border-blue-700');
+            uploadArea.classList.remove('drag-over');
         });
         
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
-            uploadArea.classList.remove('bg-blue-100', 'border-blue-700');
+            uploadArea.classList.remove('drag-over');
             handleFiles(e.dataTransfer.files);
         });
 
@@ -276,8 +599,17 @@
                 f.name.endsWith('.doc') || f.name.endsWith('.docx')
             );
             if (selectedFiles.length > 0) {
-                uploadArea.querySelector('h3').textContent = 
-                    `${selectedFiles.length} file(s) selected`;
+                const fileNames = selectedFiles.map(f => f.name).join(', ');
+                uploadArea.innerHTML = `
+                    <div class="text-5xl text-emerald-500 mb-4">
+                        <svg class="inline-block w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-2">${selectedFiles.length} file(s) selected</h3>
+                    <p class="text-gray-500 text-sm">${fileNames}</p>
+                    <p class="text-blue-600 text-sm mt-3 font-medium">Click to change selection</p>
+                `;
                 processBtn.disabled = false;
             }
         }
@@ -292,8 +624,9 @@
                 const formData = new FormData();
                 formData.append('file', selectedFiles[0]);
                 
-                const profileSelect = document.getElementById('profileSelectUpload');
-                formData.append('profile', profileSelect.value);
+                // Get selected processors
+                const processors = getSelectedProcessors('Upload');
+                formData.append('processors', JSON.stringify(processors));
 
                 const response = await fetch('/upload', {
                     method: 'POST',
@@ -321,7 +654,7 @@
             showLoading(true);
 
             try {
-                const profileSelect = document.getElementById('profileSelectDrive');
+                const processors = getSelectedProcessors('Drive');
                 const response = await fetch('/process-drive', {
                     method: 'POST',
                     headers: {
@@ -329,7 +662,7 @@
                     },
                     body: JSON.stringify({ 
                         folder_url: driveUrl,
-                        profile: profileSelect.value
+                        processors: processors
                     })
                 });
 
@@ -358,8 +691,16 @@
             results.forEach((result, index) => {
                 if (!result.success) {
                     resultsDiv.innerHTML += `
-                        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded text-red-700 mb-4">
-                            <strong>Error processing ${result.filename}:</strong> ${result.error}
+                        <div class="result-card bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                <div>
+                                    <p class="font-semibold text-red-700">${escapeHtml(result.filename)}</p>
+                                    <p class="text-red-600 text-sm mt-1">${result.error}</p>
+                                </div>
+                            </div>
                         </div>
                     `;
                     return;
@@ -370,54 +711,94 @@
                 window.removedItems[index] = result.removed_items;
 
                 const stats = result.statistics;
-                const profileName = result.profile || 'unknown';
-                const profileDisplay = getProfileDisplayName(profileName);
+                const processorsUsed = result.processors || [];
+                
+                // Build format checkboxes for this result
+                let formatCheckboxes = '';
+                for (const [key, format] of Object.entries(availableFormats)) {
+                    const checked = key === 'docx' ? 'checked' : '';
+                    formatCheckboxes += `
+                        <label class="flex items-center gap-2 cursor-pointer text-sm group">
+                            <input type="checkbox" class="format-checkbox-${index} w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 focus:ring-2" 
+                                   value="${key}" ${checked}>
+                            <span class="text-gray-600 group-hover:text-gray-800 transition-colors">${format.title || key.toUpperCase()}</span>
+                        </label>
+                    `;
+                }
                 
                 const resultHtml = `
-                    <div class="border border-gray-200 rounded-lg overflow-hidden mb-6">
-                        <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center flex-wrap gap-3">
-                            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2 flex-wrap">
-                                ${escapeHtml(result.filename)}
-                                <span class="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-semibold">${profileDisplay}</span>
-                            </h3>
-                            <button class="download-btn px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium transition-all hover:bg-gray-200 flex items-center gap-2" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
-                                <span class="icon"><svg><use href="#icon-download"/></svg></span> Download Cleaned
-                            </button>
+                    <div class="result-card border border-gray-200 rounded-2xl overflow-hidden mb-6 shadow-sm hover:shadow-md transition-shadow">
+                        <!-- Header -->
+                        <div class="bg-gradient-to-r from-gray-50 to-white px-5 py-4 border-b border-gray-100">
+                            <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                        <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-gray-800">
+                                        ${escapeHtml(result.filename)}
+                                    </h3>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-4">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-sm text-gray-500 font-medium">Format:</span>
+                                        ${formatCheckboxes}
+                                    </div>
+                                    <button class="download-btn px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg font-medium transition-all hover:from-emerald-600 hover:to-emerald-700 hover:shadow-lg flex items-center gap-2" data-filename="${escapeHtml(result.filename)}" data-text-index="${index}">
+                                        <span class="icon"><svg><use href="#icon-download"/></svg></span> Download
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Processor Tags -->
+                            <div class="flex flex-wrap gap-1.5 mt-4">
+                                ${processorsUsed.map(p => `
+                                    <span class="inline-flex items-center bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg text-xs font-medium border border-blue-100">
+                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        ${formatProcessorName(p)}
+                                    </span>
+                                `).join('')}
+                            </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-blue-50">
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-blue-600">${stats.reduction_percentage}%</div>
-                                <div class="text-xs text-gray-500 mt-1">Reduced</div>
+                        <!-- Stats -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50">
+                            <div class="stat-item text-center p-3 bg-white/60 rounded-xl">
+                                <div class="text-2xl sm:text-3xl font-bold text-blue-600">${stats.reduction_percentage}%</div>
+                                <div class="text-xs text-gray-500 mt-1 font-medium">Reduced</div>
                             </div>
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-blue-600">${stats.removed_words}</div>
-                                <div class="text-xs text-gray-500 mt-1">Words Removed</div>
+                            <div class="stat-item text-center p-3 bg-white/60 rounded-xl">
+                                <div class="text-2xl sm:text-3xl font-bold text-rose-500">${stats.removed_words}</div>
+                                <div class="text-xs text-gray-500 mt-1 font-medium">Words Removed</div>
                             </div>
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-blue-600">${stats.removed_lines}</div>
-                                <div class="text-xs text-gray-500 mt-1">Lines Removed</div>
+                            <div class="stat-item text-center p-3 bg-white/60 rounded-xl">
+                                <div class="text-2xl sm:text-3xl font-bold text-amber-500">${stats.removed_lines}</div>
+                                <div class="text-xs text-gray-500 mt-1 font-medium">Lines Removed</div>
                             </div>
-                            <div class="text-center">
-                                <div class="text-2xl font-bold text-blue-600">${stats.cleaned_words}</div>
-                                <div class="text-xs text-gray-500 mt-1">Words Remaining</div>
+                            <div class="stat-item text-center p-3 bg-white/60 rounded-xl">
+                                <div class="text-2xl sm:text-3xl font-bold text-emerald-500">${stats.cleaned_words}</div>
+                                <div class="text-xs text-gray-500 mt-1 font-medium">Words Remaining</div>
                             </div>
                         </div>
 
+                        <!-- Text Preview -->
                         <div class="p-5">
-                            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center flex-wrap gap-2">
-                                    <span>Original Text (with removals highlighted)</span>
+                            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                                <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                                    <span class="text-gray-700">Original Text <span class="text-gray-400 font-normal text-sm">(with removals highlighted)</span></span>
                                     <div class="flex gap-2">
-                                        <button class="copy-btn px-3 py-1.5 bg-gray-600 text-white rounded text-sm font-medium transition-all hover:bg-gray-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
+                                        <button class="copy-btn px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium transition-all hover:bg-gray-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
                                             <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy Original
                                         </button>
-                                        <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
+                                        <button class="copy-btn px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium transition-all hover:bg-blue-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
                                             <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy Cleaned
                                         </button>
                                     </div>
                                 </div>
-                                <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700">${highlightRemovedText(result.original_text, result.removed_items)}</div>
+                                <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${highlightRemovedText(result.original_text, result.removed_items)}</div>
                             </div>
                         </div>
                     </div>
@@ -426,6 +807,9 @@
             });
 
             resultsDiv.classList.remove('hidden');
+            
+            // Scroll to results
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
             
             // Initialize Tippy tooltips on removed text
             tippy('.removed-text[data-tippy-content]', {
@@ -441,47 +825,71 @@
                     const filename = this.getAttribute('data-filename');
                     const textIndex = this.getAttribute('data-text-index');
                     const cleanedText = window.cleanedTexts[textIndex];
-                    downloadCleaned(filename, cleanedText);
+                    downloadCleaned(filename, cleanedText, textIndex);
                 });
             });
         }
 
-        async function downloadCleaned(filename, cleanedText) {
-            try {
-                const response = await fetch('/download-cleaned', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        filename: filename,
-                        cleaned_text: cleanedText
-                    })
-                });
+        async function downloadCleaned(filename, cleanedText, textIndex) {
+            // Get selected formats for this result
+            const checkboxes = document.querySelectorAll(`.format-checkbox-${textIndex}:checked`);
+            let formats = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (formats.length === 0) {
+                formats = ['docx']; // Default
+            }
+            
+            // Download each format
+            for (const format of formats) {
+                try {
+                    const formatInfo = availableFormats[format] || { extension: '.' + format };
+                    const response = await fetch('/download-cleaned', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            filename: filename,
+                            cleaned_text: cleanedText,
+                            format: format
+                        })
+                    });
 
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = filename.replace(/\.[^/.]+$/, '') + '_cleaned.docx';
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        const baseName = filename.replace(/\.[^/.]+$/, '');
+                        a.download = `${baseName}_cleaned${formatInfo.extension || '.' + format}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        
+                        // Small delay between downloads
+                        if (formats.length > 1) {
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    } else {
+                        const error = await response.json();
+                        showError(`Failed to download ${format}: ${error.error}`);
+                    }
+                } catch (error) {
+                    showError(`Failed to download ${format}: ${error.message}`);
                 }
-            } catch (error) {
-                showError('Failed to download cleaned document: ' + error.message);
             }
         }
 
         function showLoading(show) {
             document.getElementById('loading').classList.toggle('hidden', !show);
+            document.getElementById('upload-tab').classList.toggle('hidden', show);
+            document.getElementById('drive-tab').classList.add('hidden');
         }
 
         function showError(message) {
             const errorDiv = document.getElementById('error');
-            errorDiv.textContent = message;
+            document.getElementById('errorText').textContent = message;
             errorDiv.classList.remove('hidden');
         }
 
@@ -590,14 +998,13 @@
                 await navigator.clipboard.writeText(text);
                 
                 const originalHTML = button.innerHTML;
+                const originalClasses = button.className;
                 button.innerHTML = '<span class="icon"><svg><use href="#icon-check"/></svg></span> Copied!';
-                button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                button.classList.add('bg-emerald-500');
+                button.className = button.className.replace(/bg-\w+-600/g, 'bg-emerald-500').replace(/hover:bg-\w+-700/g, 'hover:bg-emerald-600');
                 
                 setTimeout(() => {
                     button.innerHTML = originalHTML;
-                    button.classList.remove('bg-emerald-500');
-                    button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    button.className = originalClasses;
                 }, 2000);
             } catch (err) {
                 console.error('Failed to copy:', err);

@@ -1,10 +1,22 @@
 """
 Document processor for handling Word documents.
+
+Uses the plugin-based architecture for cleaning and output writers.
 """
-import os
+
+from typing import Dict, Any, Optional, List
+
 from docx import Document
-from docx.shared import Pt
-from cleaner import TranscriptCleaner, DEFAULT_PROFILE
+
+from cleaner import TranscriptCleaner
+from registry import WriterRegistry
+
+# Import writers to register them (side effect: registers them)
+import writers.docx_writer  # noqa: F401
+import writers.txt_writer  # noqa: F401
+
+# Default processors to use when none specified
+DEFAULT_PROCESSORS = ['special_chars', 'seif_marker', 'title_style', 'regex', 'whitespace']
 
 
 class DocumentProcessor:
@@ -13,7 +25,7 @@ class DocumentProcessor:
     def __init__(self):
         self.cleaner = TranscriptCleaner()
     
-    def extract_text_from_docx(self, file_path):
+    def extract_text_from_docx(self, file_path: str) -> str:
         """
         Extract text from a .docx file.
         
@@ -35,7 +47,7 @@ class DocumentProcessor:
         except Exception as e:
             raise Exception(f"Error reading document: {str(e)}")
     
-    def extract_paragraphs_with_metadata(self, file_path):
+    def extract_paragraphs_with_metadata(self, file_path: str) -> tuple:
         """
         Extract paragraphs with their metadata (style, font size, etc.).
         
@@ -72,6 +84,9 @@ class DocumentProcessor:
                 
                 is_bold = self._is_paragraph_bold(para)
                 
+                # Extract runs with formatting
+                runs = self._extract_runs(para)
+                
                 para_len = len(para.text)
                 paragraphs_meta.append({
                     'text': para.text,
@@ -84,6 +99,7 @@ class DocumentProcessor:
                     'font_size': font_size,
                     'char_count': para_len,
                     'word_count': len(para.text.split()),
+                    'runs': runs,  # Store run formatting for output
                 })
                 # +1 for the newline separator
                 current_pos += para_len + 1
@@ -103,7 +119,41 @@ class DocumentProcessor:
         except Exception as e:
             raise Exception(f"Error reading document metadata: {str(e)}")
     
-    def _is_paragraph_bold(self, para):
+    def _extract_runs(self, para) -> List[Dict[str, Any]]:
+        """Extract runs with their formatting from a paragraph."""
+        runs = []
+        for run in para.runs:
+            run_data = {
+                'text': run.text,
+                'style': {
+                    'bold': run.font.bold,
+                    'italic': run.font.italic,
+                    'underline': run.font.underline is not None and run.font.underline,
+                    'font_size': run.font.size.pt if run.font.size else None,
+                    'font_name': run.font.name,
+                    'strike': run.font.strike,
+                    'superscript': run.font.superscript,
+                    'subscript': run.font.subscript,
+                }
+            }
+            # Extract color if present
+            if run.font.color and run.font.color.rgb:
+                try:
+                    rgb_obj = run.font.color.rgb
+                    hex_color = str(rgb_obj)
+                    if len(hex_color) == 6:
+                        r = int(hex_color[0:2], 16)
+                        g = int(hex_color[2:4], 16)
+                        b = int(hex_color[4:6], 16)
+                        run_data['style']['color_rgb'] = (r, g, b)
+                except Exception:
+                    pass
+            
+            runs.append(run_data)
+        
+        return runs
+    
+    def _is_paragraph_bold(self, para) -> bool:
         """Check if the entire paragraph is bold."""
         if not para.runs:
             return False
@@ -112,7 +162,7 @@ class DocumentProcessor:
                 return False
         return len(para.runs) > 0 and any(r.text.strip() for r in para.runs)
     
-    def _get_paragraph_font_size(self, para, doc_default_size=None):
+    def _get_paragraph_font_size(self, para, doc_default_size=None) -> Optional[float]:
         """Get the font size of a paragraph (from first run, style, or default)."""
         for run in para.runs:
             if run.font.size:
@@ -129,29 +179,30 @@ class DocumentProcessor:
         
         return doc_default_size
     
-    def process_document(self, file_path, filename, profile=None):
+    def process_document(self, file_path: str, filename: str, 
+                         processors: Optional[List[str]] = None) -> Dict[str, Any]:
         """
         Process a document: extract text, clean it, and return results.
         
         Args:
             file_path: Path to the document file
             filename: Original filename
-            profile: Cleaning profile to use (default: DEFAULT_PROFILE constant)
+            processors: List of processor names to apply (default: DEFAULT_PROCESSORS)
             
         Returns:
             dict: Processing results including original, cleaned, removed items, and stats
         """
-        if profile is None:
-            profile = DEFAULT_PROFILE
-        
         original_text, paragraphs_meta = self.extract_paragraphs_with_metadata(file_path)
         
         context = {
             'paragraphs': paragraphs_meta,
         }
         
-        cleaned_text, removed_items, profile_used = self.cleaner.clean_text(
-            original_text, profile, context
+        # Use provided processors or default set
+        processor_list = processors if processors else DEFAULT_PROCESSORS
+        
+        cleaned_text, removed_items = self.cleaner.clean_with_processors(
+            original_text, processor_list, context
         )
         
         stats = self.cleaner.get_statistics(original_text, cleaned_text)
@@ -162,25 +213,67 @@ class DocumentProcessor:
             'cleaned_text': cleaned_text,
             'removed_items': removed_items,
             'statistics': stats,
-            'profile': profile_used,
+            'processors': processor_list,
+            'context': context,  # Include context for writers
             'success': True
         }
     
-    def save_cleaned_document(self, cleaned_text, output_path):
+    def save_cleaned_document(self, cleaned_text: str, output_path: str,
+                              format_name: str = 'docx',
+                              context: Optional[Dict[str, Any]] = None) -> str:
         """
-        Save cleaned text to a new Word document.
+        Save cleaned text to a document using the specified writer.
         
         Args:
             cleaned_text: The cleaned text to save
             output_path: Path where to save the document
+            format_name: Output format ('docx', 'txt', etc.)
+            context: Optional context with paragraph metadata for formatting
+            
+        Returns:
+            str: The output path
         """
-        doc = Document()
+        writer = WriterRegistry.get_writer(format_name)
+        if not writer:
+            # Fallback to docx
+            writer = WriterRegistry.get_writer('docx')
         
-        # Split text into paragraphs and add to document
-        paragraphs = cleaned_text.split('\n')
-        for para_text in paragraphs:
-            if para_text.strip():
-                doc.add_paragraph(para_text)
+        if writer:
+            writer.write(cleaned_text, output_path, context)
+        else:
+            # Ultimate fallback - basic docx
+            from docx import Document as DocxDoc
+            doc = DocxDoc()
+            for para_text in cleaned_text.split('\n'):
+                if para_text.strip():
+                    doc.add_paragraph(para_text)
+            doc.save(output_path)
         
-        doc.save(output_path)
         return output_path
+    
+    def get_cleaned_bytes(self, cleaned_text: str, format_name: str = 'docx',
+                          context: Optional[Dict[str, Any]] = None) -> bytes:
+        """
+        Get cleaned document as bytes for download.
+        
+        Args:
+            cleaned_text: The cleaned text
+            format_name: Output format ('docx', 'txt', etc.)
+            context: Optional context with paragraph metadata
+            
+        Returns:
+            bytes: The document content as bytes
+        """
+        writer = WriterRegistry.get_writer(format_name)
+        if not writer:
+            writer = WriterRegistry.get_writer('docx')
+        
+        if writer:
+            return writer.write_to_bytes(cleaned_text, context)
+        else:
+            # Fallback
+            return cleaned_text.encode('utf-8')
+    
+    def get_available_formats(self) -> Dict[str, Dict[str, str]]:
+        """Get available output formats."""
+        return WriterRegistry.get_formats()

@@ -61,3 +61,30 @@ def get_gematria_value(text):
         return 0
     
     return sum(GEMATRIA_VALUES.get(c, 0) for c in text)
+
+
+def sanitize_xml_text(text: str) -> str:
+    """
+    Remove characters that are not valid in XML.
+    
+    XML 1.0 valid characters: #x9 | #xA | #xD | [#x20-#xD7FF] | [#xE000-#xFFFD]
+    
+    This prevents corrupted docx files from invalid characters.
+    
+    Args:
+        text: Text to sanitize
+        
+    Returns:
+        str: Text with invalid XML characters removed
+    """
+    def is_valid_xml_char(c):
+        codepoint = ord(c)
+        return (
+            codepoint == 0x09  # Tab
+            or codepoint == 0x0A  # Line feed
+            or codepoint == 0x0D  # Carriage return
+            or (0x20 <= codepoint <= 0xD7FF)
+            or (0xE000 <= codepoint <= 0xFFFD)
+        )
+    
+    return "".join(c for c in text if is_valid_xml_char(c))
