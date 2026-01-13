@@ -50,6 +50,15 @@ class DocumentProcessor:
             paragraphs_meta = []
             all_font_sizes = []
             
+            doc_default_size = 12
+            try:
+                normal_style = doc.styles['Normal']
+                if normal_style.font and normal_style.font.size:
+                    doc_default_size = normal_style.font.size.pt
+            except KeyError:
+                pass
+            
+            current_pos = 0
             for para in doc.paragraphs:
                 if not para.text.strip():
                     continue
@@ -57,18 +66,27 @@ class DocumentProcessor:
                 style_name = para.style.name if para.style else None
                 is_heading_style = style_name and ('heading' in style_name.lower() or 'title' in style_name.lower())
                 
-                font_size = self._get_paragraph_font_size(para)
+                font_size = self._get_paragraph_font_size(para, doc_default_size)
                 if font_size:
                     all_font_sizes.append(font_size)
                 
+                is_bold = self._is_paragraph_bold(para)
+                
+                para_len = len(para.text)
                 paragraphs_meta.append({
                     'text': para.text,
+                    'original_text': para.text,  # Keep original for highlighting
+                    'start_pos': current_pos,
+                    'end_pos': current_pos + para_len,
                     'style_name': style_name,
                     'is_heading_style': is_heading_style,
+                    'is_bold': is_bold,
                     'font_size': font_size,
-                    'char_count': len(para.text),
+                    'char_count': para_len,
                     'word_count': len(para.text.split()),
                 })
+                # +1 for the newline separator
+                current_pos += para_len + 1
             
             avg_font_size = sum(all_font_sizes) / len(all_font_sizes) if all_font_sizes else 12
             
@@ -85,8 +103,17 @@ class DocumentProcessor:
         except Exception as e:
             raise Exception(f"Error reading document metadata: {str(e)}")
     
-    def _get_paragraph_font_size(self, para):
-        """Get the font size of a paragraph (from first run or style)."""
+    def _is_paragraph_bold(self, para):
+        """Check if the entire paragraph is bold."""
+        if not para.runs:
+            return False
+        for run in para.runs:
+            if run.text.strip() and not run.bold:
+                return False
+        return len(para.runs) > 0 and any(r.text.strip() for r in para.runs)
+    
+    def _get_paragraph_font_size(self, para, doc_default_size=None):
+        """Get the font size of a paragraph (from first run, style, or default)."""
         for run in para.runs:
             if run.font.size:
                 return run.font.size.pt
@@ -94,7 +121,13 @@ class DocumentProcessor:
         if para.style and para.style.font and para.style.font.size:
             return para.style.font.size.pt
         
-        return None
+        style = para.style
+        while style:
+            if style.font and style.font.size:
+                return style.font.size.pt
+            style = style.base_style
+        
+        return doc_default_size
     
     def process_document(self, file_path, filename, profile=None):
         """

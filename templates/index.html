@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yiddish Transcript Cleaner</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
     <style>
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -160,8 +162,8 @@
                 const profileKeys = Object.keys(profileDescriptions).sort();
                 profileOptions = profileKeys.map(key => ({
                     value: key,
-                    label: formatProfileName(key),
-                    description: profileDescriptions[key]
+                    label: profileDescriptions[key].title || formatProfileName(key),
+                    description: profileDescriptions[key].description || ''
                 }));
                 
                 populateDropdowns();
@@ -201,7 +203,8 @@
         }
         
         function getProfileDisplayName(name) {
-            return formatProfileName(name);
+            const profile = profileOptions.find(p => p.value === name);
+            return profile ? profile.label : formatProfileName(name);
         }
         
         function updateProfileInfo() {
@@ -424,6 +427,15 @@
 
             resultsDiv.classList.remove('hidden');
             
+            // Initialize Tippy tooltips on removed text
+            tippy('.removed-text[data-tippy-content]', {
+                placement: 'top',
+                arrow: true,
+                theme: 'light-border',
+                animation: 'fade',
+                delay: [200, 0],
+            });
+            
             document.querySelectorAll('.download-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const filename = this.getAttribute('data-filename');
@@ -488,38 +500,58 @@
                 return escapeHtml(originalText);
             }
             
-            // Collect all removed matches
-            const allMatches = removedItems.flatMap(item => item.matches);
-            
-            if (allMatches.length === 0) {
-                return escapeHtml(originalText);
-            }
-            
-            // Find all occurrences and their positions
+            // Collect all positions from removed items
             let positions = [];
-            allMatches.forEach(match => {
-                let startIndex = 0;
-                let index;
-                while ((index = originalText.indexOf(match, startIndex)) !== -1) {
-                    positions.push({ start: index, end: index + match.length, text: match });
-                    startIndex = index + 1;
+            removedItems.forEach(item => {
+                // Use positions if available (preferred method)
+                if (item.positions && item.positions.length > 0) {
+                    item.positions.forEach(pos => {
+                        positions.push({
+                            start: pos.start,
+                            end: pos.end,
+                            reason: pos.reason || item.pattern
+                        });
+                    });
+                }
+                // Fallback to pattern matching for items without positions
+                else if (item.matches && item.matches.length > 0) {
+                    item.matches.forEach(match => {
+                        let startIndex = 0;
+                        let index;
+                        while ((index = originalText.indexOf(match, startIndex)) !== -1) {
+                            positions.push({
+                                start: index,
+                                end: index + match.length,
+                                reason: item.pattern
+                            });
+                            startIndex = index + 1;
+                        }
+                    });
                 }
             });
+            
+            if (positions.length === 0) {
+                return escapeHtml(originalText);
+            }
             
             // Sort by start position
             positions.sort((a, b) => a.start - b.start);
             
-            // Merge overlapping ranges
+            // Merge overlapping ranges, combining reasons
             let merged = [];
             positions.forEach(pos => {
                 if (merged.length === 0) {
-                    merged.push(pos);
+                    merged.push({...pos});
                 } else {
                     const last = merged[merged.length - 1];
                     if (pos.start <= last.end) {
                         last.end = Math.max(last.end, pos.end);
+                        // Combine reasons if different
+                        if (last.reason !== pos.reason && !last.reason.includes(pos.reason)) {
+                            last.reason = last.reason + ', ' + pos.reason;
+                        }
                     } else {
-                        merged.push(pos);
+                        merged.push({...pos});
                     }
                 }
             });
@@ -532,9 +564,10 @@
                 if (pos.start > lastEnd) {
                     result += escapeHtml(originalText.substring(lastEnd, pos.start));
                 }
-                // Add the removed section with highlighting
+                // Add the removed section with highlighting and tooltip
                 const removedText = originalText.substring(pos.start, pos.end);
-                result += `<span class="removed-text">${escapeHtml(removedText)}</span>`;
+                const escapedReason = escapeHtml(pos.reason);
+                result += `<span class="removed-text" data-tippy-content="${escapedReason}">${escapeHtml(removedText)}</span>`;
                 lastEnd = pos.end;
             });
             // Add any remaining text
