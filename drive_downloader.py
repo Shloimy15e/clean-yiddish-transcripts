@@ -14,6 +14,13 @@ from googleapiclient.http import MediaIoBaseDownload
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
+# Supported document MIME types
+SUPPORTED_MIME_TYPES = [
+    'application/vnd.google-apps.document',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword'
+]
+
 
 class DriveDownloader:
     """Downloads documents from Google Drive."""
@@ -143,11 +150,7 @@ class DriveDownloader:
         documents = []
         
         # Query for documents in folder
-        mime_types = [
-            "mimeType='application/vnd.google-apps.document'",
-            "mimeType='application/vnd.openxmlformats-officedocument.wordprocessingml.document'",
-            "mimeType='application/msword'"
-        ]
+        mime_types = [f"mimeType='{mime}'" for mime in SUPPORTED_MIME_TYPES]
         query = f"'{folder_id}' in parents and ({' or '.join(mime_types)})"
         
         results = self.service.files().list(
@@ -225,19 +228,20 @@ class DriveDownloader:
         fh.close()
         return file_path
     
-    def download_folder(self, folder_url, output_dir='temp'):
+    def download_folder(self, folder_url, output_dir='temp', recursive=True):
         """
         Download all documents from a Google Drive folder.
         
         Args:
             folder_url: Google Drive folder URL or ID
             output_dir: Directory to save files
+            recursive: If True, recursively process subfolders (default: True)
             
         Returns:
             list: List of downloaded file paths
         """
         folder_id = self.extract_folder_id(folder_url)
-        documents = self.list_documents_in_folder(folder_id, recursive=True)
+        documents = self.list_documents_in_folder(folder_id, recursive=recursive)
         
         downloaded_files = []
         for doc in documents:
@@ -280,16 +284,9 @@ class DriveDownloader:
                     fields='id, name, mimeType'
                 ).execute()
                 
-                # Check if it's a document type we support
-                supported_types = [
-                    'application/vnd.google-apps.document',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/msword'
-                ]
-                
                 mime_type = file_metadata.get('mimeType')
                 
-                if mime_type in supported_types:
+                if mime_type in SUPPORTED_MIME_TYPES:
                     # Download single file
                     file_path = self.download_document(
                         file_metadata['id'],
@@ -303,7 +300,7 @@ class DriveDownloader:
                     }]
                 elif mime_type == 'application/vnd.google-apps.folder':
                     # It's actually a folder, process as folder
-                    return self.download_folder(folder_id, output_dir)
+                    return self.download_folder(file_id, output_dir)
                 else:
                     raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
             except Exception as e:
@@ -326,14 +323,8 @@ class DriveDownloader:
                 ).execute()
                 
                 # Validate file type
-                supported_types = [
-                    'application/vnd.google-apps.document',
-                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                    'application/msword'
-                ]
-                
                 mime_type = file_metadata.get('mimeType')
-                if mime_type not in supported_types:
+                if mime_type not in SUPPORTED_MIME_TYPES:
                     raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
                 
                 file_path = self.download_document(
