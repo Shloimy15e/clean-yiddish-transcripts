@@ -40,7 +40,7 @@ class TranscriptCleaner:
                 ]
             },
             'titles_and_parentheses': {
-                'description': 'Removes titles/headings AND parentheses that follow brackets',
+                'description': 'Removes titles/headings AND all bracketed/parenthetical content',
                 'patterns': [
                     # Bracketed content followed by parenthetical content
                     (r'\[.*?\]\s*\(.*?\)', 'brackets followed by parentheses'),

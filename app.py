@@ -21,6 +21,13 @@ os.makedirs(app.config['TEMP_FOLDER'], exist_ok=True)
 processor = DocumentProcessor()
 
 
+def get_cleaner_profiles():
+    """Get available cleaning profiles."""
+    from cleaner import TranscriptCleaner
+    cleaner = TranscriptCleaner()
+    return cleaner.get_available_profiles()
+
+
 def allowed_file(filename):
     """Check if file has allowed extension."""
     return '.' in filename and \
@@ -36,9 +43,7 @@ def index():
 @app.route('/profiles', methods=['GET'])
 def get_profiles():
     """Get available cleaning profiles."""
-    from cleaner import TranscriptCleaner
-    cleaner = TranscriptCleaner()
-    profiles = cleaner.get_available_profiles()
+    profiles = get_cleaner_profiles()
     return jsonify(profiles)
 
 

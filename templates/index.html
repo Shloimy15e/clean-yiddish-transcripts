@@ -438,16 +438,39 @@
     <script>
         // Store profile descriptions
         let profileDescriptions = {};
+        let profileOptions = [];
 
         // Load profiles on page load
         async function loadProfiles() {
             try {
                 const response = await fetch('/profiles');
                 profileDescriptions = await response.json();
+                
+                // Build profile options array
+                profileOptions = Object.keys(profileDescriptions).map(key => ({
+                    value: key,
+                    label: formatProfileName(key),
+                    description: profileDescriptions[key]
+                }));
+                
                 updateProfileInfo();
             } catch (error) {
                 console.error('Failed to load profiles:', error);
             }
+        }
+        
+        // Format profile key to display name
+        function formatProfileName(key) {
+            return key.split('_').map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ');
+        }
+        
+        // Get profile display name from key
+        function getProfileDisplayName(profileKey) {
+            if (!profileKey) return 'Unknown';
+            const option = profileOptions.find(opt => opt.value === profileKey);
+            return option ? option.label : formatProfileName(profileKey);
         }
 
         // Update profile info text when selection changes
@@ -623,9 +646,7 @@
 
                 const stats = result.statistics;
                 const profileName = result.profile || 'unknown';
-                const profileDisplay = profileName === 'titles_only' 
-                    ? 'Titles/Headings Only' 
-                    : 'Titles/Headings + Parentheses After Brackets';
+                const profileDisplay = getProfileDisplayName(profileName);
                 
                 const resultHtml = `
                     <div class="result-item">
