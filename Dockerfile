@@ -17,12 +17,13 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p uploads temp
 
-# Expose port
-EXPOSE 5000
+# Expose port (Cloud Run uses PORT env var, default 8080)
+EXPOSE 8080
 
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "app:app"]
+# Run the application using shell form to expand $PORT
+CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
