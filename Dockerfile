@@ -1,29 +1,23 @@
+# Use Python 3.11 slim image
 FROM python:3.11-slim
 
-WORKDIR /app
-
-# Install system dependencies
+# Install system dependencies including LibreOffice for .doc conversion
 RUN apt-get update && apt-get install -y \
-    gcc \
+    libreoffice \
     && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy application code
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p uploads temp
+# Expose port
+EXPOSE 5050
 
-# Expose port (Cloud Run uses PORT env var, default 8080)
-EXPOSE 8080
-
-# Set environment variables
-ENV FLASK_APP=app.py
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8080
-
-# Run the application using shell form to expand $PORT
-CMD gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 app:app
+# Run the application
+CMD ["python", "app.py"]

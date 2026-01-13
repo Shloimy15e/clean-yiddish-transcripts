@@ -38,6 +38,8 @@ FORCE_REMOVE_PATTERNS: List[str] = [
     r'בס"ד',  # Remove "B'S'D" header
     r'כ"ק אד"ש צוה',  # Remove this specific phrase
     r'אח"כ צוה לנגן',  # Remove this specific phrase
+    r'מאמר זה רשמתי',  # Remove this specific phrase
+    r'-----------',  # Remove this specific phrase
     # Add more patterns here
 ]
 

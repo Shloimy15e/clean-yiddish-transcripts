@@ -585,7 +585,7 @@ heroku ps:scale web=1
 
 ### Google Cloud Run Deployment
 
-Google Cloud Run is a serverless platform that automatically scales your application.
+Google Cloud Run is a serverless platform that automatically scales your application. This deployment includes support for both .docx and .doc files using LibreOffice for .doc conversion.
 
 **Step 1: Install Google Cloud SDK**
 - Download from [Google Cloud SDK](https://cloud.google.com/sdk/docs/install)
@@ -610,8 +610,13 @@ gcloud run deploy yiddish-transcript-cleaner \
   --source . \
   --platform managed \
   --region us-central1 \
-  --allow-unauthenticated
+  --allow-unauthenticated \
+  --memory 1Gi \
+  --cpu 1 \
+  --max-instances 10
 ```
+
+**Note:** The deployment includes LibreOffice for .doc file conversion. The application will automatically detect and use LibreOffice when running on Linux (Cloud Run) or fall back to Microsoft Word COM when running on Windows.
 
 **Step 5: Access Your Application**
 After deployment completes, Cloud Run will provide a URL like:
