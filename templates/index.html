@@ -413,12 +413,12 @@
                     <div class="profile-info" id="profileInfoDrive" aria-live="polite">Loading profile descriptions...</div>
                 </div>
                 <div class="input-group">
-                    <label for="driveUrl">Google Drive Folder URL</label>
-                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/drive/folders/..." />
+                    <label for="driveUrl">Google Drive File or Folder URL</label>
+                    <input type="text" id="driveUrl" placeholder="https://drive.google.com/file/d/... or https://drive.google.com/drive/folders/..." />
                 </div>
-                <button class="btn btn-primary" id="processDriveBtn">Process Drive Folder</button>
+                <button class="btn btn-primary" id="processDriveBtn">Process Drive Link</button>
                 <p style="margin-top: 15px; color: #666; font-size: 14px;">
-                    <strong>Note:</strong> Google Drive integration requires additional setup. See README for instructions.
+                    <strong>Note:</strong> Paste a link to a single file or an entire folder (including subfolders). Google Drive integration requires additional setup - see README for instructions.
                 </p>
             </div>
 
@@ -637,13 +637,13 @@
             }
         });
 
-        // Process Drive folder
+        // Process Drive folder or file
         document.getElementById('processDriveBtn').addEventListener('click', async () => {
             const driveUrl = document.getElementById('driveUrl').value.trim();
             const profile = document.getElementById('profileSelectDrive').value;
 
             if (!driveUrl) {
-                showError('Please enter a Google Drive folder URL');
+                showError('Please enter a Google Drive file or folder URL');
                 return;
             }
 

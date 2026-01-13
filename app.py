@@ -90,7 +90,7 @@ def upload_file():
 
 @app.route('/process-drive', methods=['POST'])
 def process_drive():
-    """Handle Google Drive folder processing."""
+    """Handle Google Drive file or folder processing."""
     try:
         data = request.get_json()
         drive_url = data.get('drive_url', '').strip()
@@ -106,12 +106,12 @@ def process_drive():
                 'success': False
             }), 400
         
-        # Download documents from Drive
+        # Download documents from Drive (handles both files and folders)
         downloader = DriveDownloader()
-        downloaded_files = downloader.download_folder(drive_url, app.config['TEMP_FOLDER'])
+        downloaded_files = downloader.process_drive_url(drive_url, app.config['TEMP_FOLDER'])
         
         if not downloaded_files:
-            return jsonify({'error': 'No documents found in the folder', 'success': False}), 404
+            return jsonify({'error': 'No documents found or unable to access the resource', 'success': False}), 404
         
         # Process each downloaded file
         results = []
