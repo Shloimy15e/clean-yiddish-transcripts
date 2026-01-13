@@ -467,18 +467,21 @@
             const uploadSelect = document.getElementById('profileSelectUpload');
             const driveSelect = document.getElementById('profileSelectDrive');
             
+            // Default profile to select (most comprehensive)
+            const defaultProfile = 'titles_and_parentheses';
+            
             [uploadSelect, driveSelect].forEach(select => {
                 if (select) {
                     // Clear existing options
                     select.innerHTML = '';
                     
                     // Add profile options
-                    profileOptions.forEach((profile, index) => {
+                    profileOptions.forEach(profile => {
                         const option = document.createElement('option');
                         option.value = profile.value;
                         option.textContent = profile.label;
-                        // Select the first option by default
-                        if (index === 0) {
+                        // Select the default profile
+                        if (profile.value === defaultProfile) {
                             option.selected = true;
                         }
                         select.appendChild(option);
