@@ -15,8 +15,10 @@ from processors.special_chars import SpecialCharsProcessor
 from processors.whitespace import WhitespaceProcessor
 from processors.title_style import TitleStyleProcessor
 from processors.seif_marker import SeifMarkerProcessor
-from processors.regex_processor import RegexProcessor
 from processors.force_remove import ForceRemoveProcessor
+from processors.brackets_inline import BracketsInlineProcessor
+from processors.parentheses_notes import ParenthesesNotesProcessor
+from processors.editorial_hebrew import EditorialHebrewProcessor
 
 # Default cleaning profile
 DEFAULT_PROFILE = 'titles_and_parentheses'
@@ -35,9 +37,8 @@ EXCEPTION_PATTERNS: List[str] = [
 FORCE_REMOVE_PATTERNS: List[str] = [
     r'בס"ד',  # Remove "B'S'D" header
     r'כ"ק אד"ש צוה',  # Remove this specific phrase
-    # Add more patterns here, e.g.:
-    # r'^הערות המתקן:',  # Remove editor notes
-    # r'\[.*מתרגם.*\]',  # Remove translator notes
+    r'אח"כ צוה לנגן',  # Remove this specific phrase
+    # Add more patterns here
 ]
 
 
@@ -57,11 +58,6 @@ TITLE_PATTERNS: List[Tuple[str, str]] = [
     (r'^\s*\d+\s*$', 'standalone numbers'),
 ]
 
-BRACKET_PATTERNS: List[Tuple[str, str]] = [
-    (r'\[.*?\]\s*\(.*?\)', 'brackets followed by parentheses'),
-    (r'\[.*?\]', 'bracketed notes'),
-    (r'\(.*?\)', 'parenthetical notes'),
-]
 
 
 class CleaningProfile:
@@ -144,7 +140,7 @@ CLEANING_PROFILES: Dict[str, CleaningProfile] = {
             'titles_and_parentheses': CleaningProfile(
                 name='titles_and_parentheses',
                 title='5712+ Transcripts',
-                description='Removes titles/headings (Word styles, short paragraphs, large fonts) AND all bracketed [notes] and parenthetical (notes) content.',
+                description='Removes titles/headings (Word styles, short paragraphs, large fonts) AND inline [bracketed notes]. Keeps full bracketed paragraphs and most parenthetical content (spoken).',
         processor_configs=[
             {'name': 'special_chars'},
             {'name': 'seif_marker'},
@@ -158,9 +154,8 @@ CLEANING_PROFILES: Dict[str, CleaningProfile] = {
                 }
             },
             {
-                'name': 'regex',
+                'name': 'brackets_inline',
                 'args': {
-                    'patterns': BRACKET_PATTERNS,
                     'exception_patterns': EXCEPTION_PATTERNS,
                 }
             },
@@ -264,13 +259,15 @@ class TranscriptCleaner:
                 'exception_patterns': EXCEPTION_PATTERNS,
                 'force_remove_patterns': FORCE_REMOVE_PATTERNS,
             },
-            'regex': {
-                'patterns': BRACKET_PATTERNS,
-                'exception_patterns': EXCEPTION_PATTERNS,
-            },
             'force_remove': {
                 'force_remove_patterns': FORCE_REMOVE_PATTERNS,
-            }
+            },
+            'brackets_inline': {
+                'exception_patterns': EXCEPTION_PATTERNS,
+            },
+            'parentheses_notes': {
+                'exception_patterns': EXCEPTION_PATTERNS,
+            },
         }
         return default_args.get(processor_name, {})
     

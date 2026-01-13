@@ -103,14 +103,16 @@ class TitleStyleProcessor(BaseProcessor):
                 })
             
             elif current_word_count < self.min_words:
-                should_remove = True
-                removal_reason = f'Short paragraphs (< {self.min_words} words)'
-                short_positions.append({
-                    'start': meta.get('start_pos', 0),
-                    'end': meta.get('end_pos', 0),
-                    'text': original_text[:100],
-                    'reason': removal_reason
-                })
+                # Don't remove short paragraphs ending with question marks - they're likely real questions
+                if not current_text.rstrip().endswith('?'):
+                    should_remove = True
+                    removal_reason = f'Short paragraphs (< {self.min_words} words)'
+                    short_positions.append({
+                        'start': meta.get('start_pos', 0),
+                        'end': meta.get('end_pos', 0),
+                        'text': original_text[:100],
+                        'reason': removal_reason
+                    })
             
             elif meta.get('is_larger_than_normal'):
                 should_remove = True

@@ -1,6 +1,7 @@
 """
 Flask web application for cleaning Yiddish transcripts.
 """
+from dotenv import load_dotenv
 import os
 import shutil
 from flask import Flask, render_template, request, jsonify, send_file
@@ -8,6 +9,9 @@ from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from drive_downloader import DriveDownloader
 from cleaner import TranscriptCleaner
+
+load_dotenv()  # Load .env file at the top of app.py
+
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -217,4 +221,9 @@ if __name__ == '__main__':
     # In production, use a WSGI server like gunicorn instead
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     port = int(os.environ.get('PORT', 5050))
+    
+    if debug_mode:
+        from flask_livereload import LiveReload
+        LiveReload(app)
+    
     app.run(host='0.0.0.0', port=port, debug=debug_mode)

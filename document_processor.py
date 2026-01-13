@@ -16,7 +16,9 @@ import writers.docx_writer  # noqa: F401
 import writers.txt_writer  # noqa: F401
 
 # Default processors to use when none specified
-DEFAULT_PROCESSORS = ['special_chars', 'seif_marker', 'title_style', 'regex', 'whitespace']
+# Note: 'brackets_inline' replaces 'regex' for smarter bracket handling
+# Note: 'parentheses_notes' is NOT included by default since most parens are spoken
+DEFAULT_PROCESSORS = ['special_chars', 'seif_marker', 'title_style', 'brackets_inline', 'whitespace']
 
 
 class DocumentProcessor:
