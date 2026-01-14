@@ -300,7 +300,8 @@ class DocumentProcessor:
                     indices_to_remove.append(i)
                     # Mark both the paragraph text and the matched textbox as used
                     used_textbox_content.add(para_text)
-                    # Defensive check (matched_textbox is always set when is_likely_textbox is True)
+                    # matched_textbox is always set above when is_likely_textbox is True
+                    # (line 280 or 289), but we keep this check for defensive programming
                     if matched_textbox:
                         used_textbox_content.add(matched_textbox)
         
