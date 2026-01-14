@@ -270,10 +270,10 @@ class DocumentProcessor:
                 next_para['word_count'] > 3):
                 
                 # Check if this text appears in textbox list or matches textbox pattern
+                # Only merge if it's actually textbox content that hasn't been used yet
                 is_likely_textbox = (
-                    para_text in all_textboxes or
-                    any(para_text in tb for tb in all_textboxes) or
-                    para_text not in used_textbox_content
+                    (para_text in all_textboxes and para_text not in used_textbox_content) or
+                    any(para_text in tb for tb in all_textboxes if tb not in used_textbox_content)
                 )
                 
                 if is_likely_textbox:
@@ -285,6 +285,8 @@ class DocumentProcessor:
                     next_para['char_count'] = len(merged_text)
                     next_para['had_textbox_merged'] = True
                     indices_to_remove.append(i)
+                    # Mark this textbox content as used to prevent double-merging
+                    used_textbox_content.add(para_text)
         
         # Remove merged paragraphs in reverse order to maintain indices
         for i in reversed(indices_to_remove):
