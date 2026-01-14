@@ -271,10 +271,21 @@ class DocumentProcessor:
                 
                 # Check if this text appears in textbox list or matches textbox pattern
                 # Only merge if it's actually textbox content that hasn't been used yet
-                is_likely_textbox = (
-                    (para_text in all_textboxes and para_text not in used_textbox_content) or
-                    any(para_text in tb for tb in all_textboxes if tb not in used_textbox_content)
-                )
+                matched_textbox = None
+                is_likely_textbox = False
+                
+                # Check for exact match first
+                if para_text in all_textboxes and para_text not in used_textbox_content:
+                    is_likely_textbox = True
+                    matched_textbox = para_text
+                else:
+                    # Check for partial match - para_text is the start of a textbox
+                    # This handles drop caps where "T" might be the first char of a textbox
+                    for tb in all_textboxes:
+                        if tb not in used_textbox_content and tb.startswith(para_text):
+                            is_likely_textbox = True
+                            matched_textbox = tb
+                            break
                 
                 if is_likely_textbox:
                     # Merge with next paragraph
@@ -285,8 +296,10 @@ class DocumentProcessor:
                     next_para['char_count'] = len(merged_text)
                     next_para['had_textbox_merged'] = True
                     indices_to_remove.append(i)
-                    # Mark this textbox content as used to prevent double-merging
+                    # Mark both the paragraph text and the matched textbox as used
                     used_textbox_content.add(para_text)
+                    if matched_textbox:
+                        used_textbox_content.add(matched_textbox)
         
         # Remove merged paragraphs in reverse order to maintain indices
         for i in reversed(indices_to_remove):
