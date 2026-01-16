@@ -51,3 +51,4 @@ temp/
 # Google credentials
 credentials.json
 token.json
+token-sheets.json

@@ -12,6 +12,7 @@ from docx import Document
 from cleaner import TranscriptCleaner
 from registry import WriterRegistry
 from converter import convert_doc_to_docx
+from clean_rate import calculate_clean_rate
 
 # Import writers to register them (side effect: registers them)
 import writers.docx_writer  # noqa: F401
@@ -399,12 +400,16 @@ class DocumentProcessor:
         
         stats = self.cleaner.get_statistics(original_text, cleaned_text)
         
+        # Calculate clean rate (confidence score)
+        clean_rate = calculate_clean_rate(removed_items, stats, context)
+        
         return {
             'filename': filename,
             'original_text': original_text,
             'cleaned_text': cleaned_text,
             'removed_items': removed_items,
             'statistics': stats,
+            'clean_rate': clean_rate,
             'processors': processor_list,
             'context': context,  # Include context for writers
             'success': True

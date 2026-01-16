@@ -71,11 +71,14 @@ class DriveDownloader:
         Returns:
             str: File ID
         """
-        # Patterns for file URLs
+        # Patterns for file URLs - order matters, more specific patterns first
         patterns = [
-            r'/file/d/([a-zA-Z0-9-_]+)',
-            r'/open\?id=([a-zA-Z0-9-_]+)',
-            r'id=([a-zA-Z0-9-_]+)',
+            r'/file/d/([a-zA-Z0-9-_]+)',           # Drive file URLs
+            r'/document/d/([a-zA-Z0-9-_]+)',       # Google Docs URLs
+            r'/spreadsheets/d/([a-zA-Z0-9-_]+)',   # Google Sheets URLs
+            r'/presentation/d/([a-zA-Z0-9-_]+)',   # Google Slides URLs
+            r'/open\?id=([a-zA-Z0-9-_]+)',         # Open with ID parameter
+            r'[?&]id=([a-zA-Z0-9-_]+)',            # ID as query parameter (must have ? or & before)
         ]
         
         for pattern in patterns:
@@ -99,7 +102,7 @@ class DriveDownloader:
         # Pattern for folder URLs
         patterns = [
             r'/folders/([a-zA-Z0-9-_]+)',
-            r'id=([a-zA-Z0-9-_]+)',
+            r'[?&]id=([a-zA-Z0-9-_]+)',  # ID as query parameter (must have ? or & before)
         ]
         
         for pattern in patterns:
@@ -126,12 +129,17 @@ class DriveDownloader:
         try:
             file = self.service.files().get(
                 fileId=resource_id,
-                fields='mimeType'
+                fields='mimeType',
+                supportsAllDrives=True
             ).execute()
             
             return file.get('mimeType') == 'application/vnd.google-apps.folder'
         except Exception as e:
-            raise Exception(f"Error checking resource type: {str(e)}")
+            # Get more details from the error
+            error_msg = str(e)
+            if hasattr(e, 'resp') and hasattr(e.resp, 'status'):
+                error_msg = f"HTTP {e.resp.status}: {error_msg}"
+            raise Exception(f"Error checking resource type for ID '{resource_id}': {error_msg}")
     
     def list_documents_in_folder(self, folder_id, recursive=True):
         """
@@ -201,7 +209,7 @@ class DriveDownloader:
         os.makedirs(output_dir, exist_ok=True)
         
         # Get file metadata
-        file = self.service.files().get(fileId=file_id, fields='mimeType').execute()
+        file = self.service.files().get(fileId=file_id, fields='mimeType', supportsAllDrives=True).execute()
         mime_type = file.get('mimeType')
         
         # Handle Google Docs (convert to .docx)
@@ -273,42 +281,40 @@ class DriveDownloader:
             self.authenticate()
         
         # Try to extract file ID first
-        if '/file/d/' in drive_url or '/open?id=' in drive_url:
-            # This is likely a file URL
+        # Check for file URLs, including Google Docs, Sheets, Slides
+        if any(pattern in drive_url for pattern in ['/file/d/', '/document/d/', '/spreadsheets/d/', '/presentation/d/', '/open?id=']):
+            # This is definitely a file URL, not a folder
             file_id = self.extract_file_id(drive_url)
+            print(f"DEBUG: Extracted file ID: {file_id} from URL: {drive_url[:80]}...")
             
             # Verify it's actually a file
-            try:
-                file_metadata = self.service.files().get(
-                    fileId=file_id,
-                    fields='id, name, mimeType'
-                ).execute()
-                
-                mime_type = file_metadata.get('mimeType')
-                
-                if mime_type in SUPPORTED_MIME_TYPES:
-                    # Download single file
-                    file_path = self.download_document(
-                        file_metadata['id'],
-                        file_metadata['name'],
-                        output_dir
-                    )
-                    return [{
-                        'path': file_path,
-                        'name': file_metadata['name'],
-                        'id': file_metadata['id']
-                    }]
-                elif mime_type == 'application/vnd.google-apps.folder':
-                    # It's actually a folder, process as folder
-                    return self.download_folder(file_id, output_dir)
-                else:
-                    raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
-            except Exception as e:
-                # If file processing fails, try as folder
-                print(f"Failed to process as file, trying as folder: {str(e)}")
-                pass
+            file_metadata = self.service.files().get(
+                fileId=file_id,
+                fields='id, name, mimeType',
+                supportsAllDrives=True
+            ).execute()
+            
+            mime_type = file_metadata.get('mimeType')
+            
+            if mime_type in SUPPORTED_MIME_TYPES:
+                # Download single file
+                file_path = self.download_document(
+                    file_metadata['id'],
+                    file_metadata['name'],
+                    output_dir
+                )
+                return [{
+                    'path': file_path,
+                    'name': file_metadata['name'],
+                    'id': file_metadata['id']
+                }]
+            elif mime_type == 'application/vnd.google-apps.folder':
+                # It's actually a folder, process as folder
+                return self.download_folder(file_id, output_dir)
+            else:
+                raise Exception(f"Unsupported file type: {mime_type}. Only Word documents (.doc, .docx) and Google Docs are supported.")
         
-        # Try processing as folder
+        # Try processing as folder (only for folder URLs)
         folder_id = self.extract_folder_id(drive_url)
         
         # Check if it's actually a folder
@@ -319,7 +325,8 @@ class DriveDownloader:
                 # It's a file, download it
                 file_metadata = self.service.files().get(
                     fileId=folder_id,
-                    fields='id, name, mimeType'
+                    fields='id, name, mimeType',
+                    supportsAllDrives=True
                 ).execute()
                 
                 # Validate file type

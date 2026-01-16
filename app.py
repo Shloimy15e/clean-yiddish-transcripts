@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from document_processor import DocumentProcessor
 from drive_downloader import DriveDownloader
 from cleaner import TranscriptCleaner
+from sheet_processor import SheetProcessor
 
 load_dotenv()  # Load .env file at the top of app.py
 
@@ -161,6 +162,57 @@ def process_drive():
             'results': results,
             'total_files': len(results)
         })
+    
+    except Exception as e:
+        # Clean up temp files on error
+        if os.path.exists(app.config['TEMP_FOLDER']):
+            shutil.rmtree(app.config['TEMP_FOLDER'])
+            os.makedirs(app.config['TEMP_FOLDER'], exist_ok=True)
+        
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/process-sheet', methods=['POST'])
+def process_sheet():
+    """Handle Google Sheet batch processing."""
+    try:
+        data = request.get_json()
+        sheet_url = (data.get('sheet_url') or '').strip()
+        row_limit = data.get('row_limit', 10)
+        output_folder_url = (data.get('output_folder_url') or '').strip() or None
+        processors_list = data.get('processors', None)
+        
+        if not sheet_url:
+            return jsonify({'error': 'No Google Sheet URL provided'}), 400
+        
+        # Validate row_limit
+        try:
+            row_limit = int(row_limit)
+            if row_limit < 1:
+                row_limit = 1
+            elif row_limit > 1000:
+                row_limit = 1000  # Cap at 1000 for safety
+        except (ValueError, TypeError):
+            row_limit = 10
+        
+        # Check if Google credentials exist
+        if not os.path.exists('credentials.json'):
+            return jsonify({
+                'error': 'Google Drive credentials not configured. Please see README for setup instructions.',
+                'success': False
+            }), 400
+        
+        # Process the sheet
+        sheet_processor = SheetProcessor()
+        result = sheet_processor.process_sheet(
+            sheet_url=sheet_url,
+            row_limit=row_limit,
+            output_folder_url=output_folder_url,
+            processors=processors_list,
+            temp_dir=app.config['TEMP_FOLDER']
+        )
+        
+        return jsonify(result)
     
     except Exception as e:
         # Clean up temp files on error
