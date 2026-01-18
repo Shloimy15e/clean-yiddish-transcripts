@@ -44,6 +44,7 @@ class SheetProcessor:
         self.drive_downloader = None
         self.doc_processor = DocumentProcessor()
         self.creds = None
+        self.last_uploaded_link = None  # Track last uploaded file link
     
     def authenticate(self) -> bool:
         """Authenticate with Google Sheets and Drive APIs."""
@@ -327,49 +328,6 @@ class SheetProcessor:
         
         return None
     
-    def update_sheet_row(self, spreadsheet_id: str, sheet_name: str, 
-                          row_index: int, column_indices: Dict[str, int],
-                          clean_rate: Optional[int] = None, 
-                          cleaned_link: Optional[str] = None) -> None:
-        """
-        Update a row in the sheet with clean rate and/or cleaned link.
-        
-        Args:
-            spreadsheet_id: The spreadsheet ID
-            sheet_name: The sheet name
-            row_index: 1-based row index
-            column_indices: Dict of column names to indices
-            clean_rate: Optional clean rate to set
-            cleaned_link: Optional cleaned file link to set
-        """
-        if not self.sheets_service:
-            self.authenticate()
-        
-        updates = []
-        
-        if clean_rate is not None and CLEAN_RATE_COL in column_indices:
-            col_letter = self._col_index_to_letter(column_indices[CLEAN_RATE_COL])
-            updates.append({
-                'range': f"'{sheet_name}'!{col_letter}{row_index}",
-                'values': [[clean_rate]]
-            })
-        
-        if cleaned_link is not None and CLEANED_LINK_COL in column_indices:
-            col_letter = self._col_index_to_letter(column_indices[CLEANED_LINK_COL])
-            updates.append({
-                'range': f"'{sheet_name}'!{col_letter}{row_index}",
-                'values': [[cleaned_link]]
-            })
-        
-        if updates:
-            self.sheets_service.spreadsheets().values().batchUpdate(
-                spreadsheetId=spreadsheet_id,
-                body={
-                    'valueInputOption': 'RAW',
-                    'data': updates
-                }
-            ).execute()
-    
     def process_sheet(self, sheet_url: str, row_limit: int = 10,
                        output_folder_url: Optional[str] = None,
                        processors: Optional[List[str]] = None,
@@ -539,7 +497,10 @@ class SheetProcessor:
             
             # Update the sheet
             self.update_sheet_row(
-                spreadsheet_id, sheet_name, row_index, column_indices,
+                spreadsheet_id=spreadsheet_id,
+                sheet_name=sheet_name,
+                row_index=row_index,
+                column_indices=column_indices,
                 clean_rate=clean_rate,
                 cleaned_link=cleaned_link
             )
@@ -559,3 +520,152 @@ class SheetProcessor:
             # Clean up downloaded file
             if os.path.exists(file_path):
                 os.remove(file_path)
+
+    def get_files_from_sheet(self, sheet_url: str, row_limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get list of files from a Google Sheet for LLM processing.
+        
+        Args:
+            sheet_url: URL to the Google Sheet
+            row_limit: Maximum number of rows to process
+            
+        Returns:
+            List of dicts with file info (row, doc_link, display_text)
+        """
+        if not self.sheets_service:
+            self.authenticate()
+        
+        spreadsheet_id = self.extract_sheet_id(sheet_url)
+        data, sheet_name, hyperlinks = self.get_sheet_data(spreadsheet_id)
+        
+        if not data or len(data) < 2:
+            return []
+        
+        headers = data[0]
+        
+        # Find doc link column
+        doc_link_col_idx = None
+        for i, header in enumerate(headers):
+            if header and header.strip().lower() == DOC_LINK_COL.lower():
+                doc_link_col_idx = i
+                break
+        
+        if doc_link_col_idx is None:
+            raise Exception(f"'{DOC_LINK_COL}' column not found in the sheet.")
+        
+        files = []
+        for row_idx, row in enumerate(data[1:], start=2):
+            if len(files) >= row_limit:
+                break
+            
+            if len(row) <= doc_link_col_idx:
+                continue
+            
+            # Check hyperlink first
+            hyperlink_key = (row_idx - 1, doc_link_col_idx)
+            doc_link = hyperlinks.get(hyperlink_key, '')
+            
+            # Fallback to cell value
+            if not doc_link:
+                doc_link = row[doc_link_col_idx].strip() if row[doc_link_col_idx] else ''
+            
+            if not doc_link:
+                continue
+            
+            # Get display text (cell value or extracted filename)
+            display_text = row[doc_link_col_idx].strip() if row[doc_link_col_idx] else doc_link
+            
+            files.append({
+                'row': row_idx,
+                'doc_link': doc_link,
+                'display_text': display_text
+            })
+        
+        return files
+
+    def update_sheet_row(self, sheet_url: str = None, spreadsheet_id: str = None,
+                          sheet_name: str = None, row_number: int = None,
+                          row_index: int = None, column_indices: Dict[str, int] = None,
+                          clean_rate: Optional[int] = None, 
+                          cleaned_link: Optional[str] = None,
+                          cleaned_text: str = None,
+                          output_folder_url: str = None,
+                          filename: str = None) -> None:
+        """
+        Update a row in the sheet with clean rate and/or cleaned link.
+        Supports both legacy dict-based column indices and direct sheet URL mode.
+        
+        Args:
+            sheet_url: Google Sheet URL (alternative to spreadsheet_id)
+            spreadsheet_id: The spreadsheet ID
+            sheet_name: The sheet name
+            row_number: 1-based row number (alias for row_index)
+            row_index: 1-based row index
+            column_indices: Dict of column names to indices (legacy mode)
+            clean_rate: Optional clean rate to set
+            cleaned_link: Optional cleaned file link to set
+            cleaned_text: Optional cleaned text to upload
+            output_folder_url: Optional folder URL to upload cleaned file
+            filename: Original filename for naming the cleaned file
+        """
+        if not self.sheets_service:
+            self.authenticate()
+        
+        # Support row_number as alias for row_index
+        if row_index is None:
+            row_index = row_number
+        
+        # If sheet_url provided, extract spreadsheet_id and get columns
+        if sheet_url and not spreadsheet_id:
+            spreadsheet_id = self.extract_sheet_id(sheet_url)
+            data, sheet_name, _ = self.get_sheet_data(spreadsheet_id)
+            if data:
+                column_indices = self.find_or_create_columns(spreadsheet_id, sheet_name, data[0])
+        
+        # Handle cleaned text upload if provided
+        if cleaned_text and output_folder_url and filename:
+            output_folder_id = self.extract_folder_id(output_folder_url)
+            if output_folder_id:
+                import tempfile
+                base_name = os.path.splitext(filename)[0]
+                cleaned_filename = f"{base_name}_cleaned.txt"
+                
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+                    f.write(cleaned_text)
+                    temp_path = f.name
+                
+                try:
+                    cleaned_link = self.upload_file_to_drive(temp_path, cleaned_filename, output_folder_id)
+                    self.last_uploaded_link = cleaned_link
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+        
+        if not column_indices:
+            return
+        
+        updates = []
+        
+        if clean_rate is not None and CLEAN_RATE_COL in column_indices:
+            col_letter = self._col_index_to_letter(column_indices[CLEAN_RATE_COL])
+            updates.append({
+                'range': f"'{sheet_name}'!{col_letter}{row_index}",
+                'values': [[clean_rate]]
+            })
+        
+        if cleaned_link is not None and CLEANED_LINK_COL in column_indices:
+            col_letter = self._col_index_to_letter(column_indices[CLEANED_LINK_COL])
+            updates.append({
+                'range': f"'{sheet_name}'!{col_letter}{row_index}",
+                'values': [[cleaned_link]]
+            })
+        
+        if updates:
+            self.sheets_service.spreadsheets().values().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={
+                    'valueInputOption': 'RAW',
+                    'data': updates
+                }
+            ).execute()
+

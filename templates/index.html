@@ -263,6 +263,9 @@
         <symbol id="icon-sparkles" viewBox="0 0 512 512">
             <path d="M327.5 85.2c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L384 128l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L448 128l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L448 64 426.8 7.5C425.1 3 420.8 0 416 0s-9.1 3-10.8 7.5L384 64 327.5 85.2zM205.1 73.3c-2.6-5.7-8.3-9.3-14.5-9.3s-11.9 3.6-14.5 9.3L145.6 136 73.3 166.6c-5.7 2.6-9.3 8.3-9.3 14.5s3.6 11.9 9.3 14.5l72.3 30.5 30.6 72.3c2.6 5.7 8.3 9.3 14.5 9.3s11.9-3.6 14.5-9.3l30.6-72.3 72.3-30.6c5.7-2.6 9.3-8.3 9.3-14.5s-3.6-11.9-9.3-14.5L235.7 136 205.1 73.3zM384 384l-56.5 21.2c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L384 448l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L448 448l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L448 384l-21.2-56.5c-1.7-4.5-6-7.5-10.8-7.5s-9.1 3-10.8 7.5L384 384z"/>
         </symbol>
+        <symbol id="icon-robot" viewBox="0 0 640 512">
+            <path d="M320 0c17.7 0 32 14.3 32 32V96H472c39.8 0 72 32.2 72 72V440c0 39.8-32.2 72-72 72H168c-39.8 0-72-32.2-72-72V168c0-39.8 32.2-72 72-72H288V32c0-17.7 14.3-32 32-32zM208 384c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H208zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H304zm96 0c-8.8 0-16 7.2-16 16s7.2 16 16 16h32c8.8 0 16-7.2 16-16s-7.2-16-16-16H400zM264 256a40 40 0 1 0 -80 0 40 40 0 1 0 80 0zm152 40a40 40 0 1 0 0-80 40 40 0 1 0 0 80zM48 224H64V416H48c-26.5 0-48-21.5-48-48V272c0-26.5 21.5-48 48-48zm544 0c26.5 0 48 21.5 48 48v96c0 26.5-21.5 48-48 48H576V224h16z"/>
+        </symbol>
     </svg>
     
     <div class="max-w-5xl mx-auto">
@@ -304,8 +307,66 @@
 
             <!-- Upload Tab -->
             <div id="upload-tab" class="tab-content">
-                <!-- Profile Selector -->
-                <div class="mb-6">
+                <!-- LLM Mode Toggle -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="icon text-2xl text-purple-600"><svg><use href="#icon-robot"/></svg></span>
+                            <div>
+                                <span class="font-semibold text-gray-800">LLM Mode</span>
+                                <p class="text-xs text-gray-500">Use AI to intelligently clean your document</p>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="llmModeUpload" class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- LLM Settings (shown when LLM mode is on) -->
+                <div id="llmSettingsUpload" class="hidden mb-6 space-y-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <!-- API Key -->
+                    <div id="apiKeyContainerUpload">
+                        <label class="block mb-2 font-semibold text-gray-800">API Key <span class="text-red-500">*</span></label>
+                        <input type="password" id="apiKeyUpload" placeholder="Enter your API key (not stored)"
+                               class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100">
+                        <p class="text-xs text-gray-500 mt-1">Your API key is never stored - it's only used for this session</p>
+                    </div>
+                    
+                    <!-- Provider Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">LLM Provider</label>
+                        <div class="flex flex-wrap gap-2" id="providerSelectorUpload">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">Model</label>
+                        <select id="modelSelectorUpload" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500">
+                            <!-- Will be populated by JS -->
+                        </select>
+                    </div>
+                    
+                    <!-- Prompt Editor -->
+                    <div>
+                        <label class="flex items-center justify-between mb-2">
+                            <span class="font-semibold text-gray-800">Prompt Template</span>
+                            <button type="button" onclick="resetPrompt('Upload')" class="text-sm text-purple-600 hover:text-purple-800">Reset to Default</button>
+                        </label>
+                        <textarea id="promptUpload" rows="8" 
+                                  class="w-full p-3 border-2 border-gray-200 rounded-lg text-sm font-mono transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                                  placeholder="Loading prompt template..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Use <code class="bg-gray-200 px-1 rounded">{document_text}</code> as placeholder for the document content</p>
+                    </div>
+                </div>
+
+                <!-- Regular Processing Settings (hidden when LLM mode is on) -->
+                <div id="regularSettingsUpload">
+                    <!-- Profile Selector -->
+                    <div class="mb-6">
                     <label class="flex items-center gap-2 mb-3 font-semibold text-gray-800">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
@@ -342,6 +403,7 @@
                         </button>
                     </div>
                 </div>
+                </div> <!-- End regularSettingsUpload -->
 
                 <!-- Upload Area -->
                 <div id="uploadArea" class="upload-zone border-3 border-dashed border-blue-300 rounded-2xl p-8 sm:p-12 text-center cursor-pointer mb-6">
@@ -363,6 +425,62 @@
 
             <!-- Drive Tab -->
             <div id="drive-tab" class="tab-content hidden">
+                <!-- LLM Mode Toggle -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="icon text-2xl text-purple-600"><svg><use href="#icon-robot"/></svg></span>
+                            <div>
+                                <span class="font-semibold text-gray-800">LLM Mode</span>
+                                <p class="text-xs text-gray-500">Use AI to intelligently clean your documents</p>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="llmModeDrive" class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- LLM Settings (shown when LLM mode is on) -->
+                <div id="llmSettingsDrive" class="hidden mb-6 space-y-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <!-- API Key -->
+                    <div id="apiKeyContainerDrive">
+                        <label class="block mb-2 font-semibold text-gray-800">API Key <span class="text-red-500">*</span></label>
+                        <input type="password" id="apiKeyDrive" placeholder="Enter your API key (not stored)"
+                               class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100">
+                        <p class="text-xs text-gray-500 mt-1">Your API key is never stored - it's only used for this session</p>
+                    </div>
+                    
+                    <!-- Provider Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">LLM Provider</label>
+                        <div class="flex flex-wrap gap-2" id="providerSelectorDrive">
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">Model</label>
+                        <select id="modelSelectorDrive" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500">
+                        </select>
+                    </div>
+                    
+                    <!-- Prompt Editor -->
+                    <div>
+                        <label class="flex items-center justify-between mb-2">
+                            <span class="font-semibold text-gray-800">Prompt Template</span>
+                            <button type="button" onclick="resetPrompt('Drive')" class="text-sm text-purple-600 hover:text-purple-800">Reset to Default</button>
+                        </label>
+                        <textarea id="promptDrive" rows="8" 
+                                  class="w-full p-3 border-2 border-gray-200 rounded-lg text-sm font-mono transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100"
+                                  placeholder="Loading prompt template..."></textarea>
+                        <p class="text-xs text-gray-500 mt-1">Use <code class="bg-gray-200 px-1 rounded">{document_text}</code> as placeholder for the document content</p>
+                    </div>
+                </div>
+
+                <!-- Regular Processing Settings -->
+                <div id="regularSettingsDrive">
                 <!-- Profile Selector -->
                 <div class="mb-6">
                     <label class="flex items-center gap-2 mb-3 font-semibold text-gray-800">
@@ -401,6 +519,7 @@
                         </button>
                     </div>
                 </div>
+                </div> <!-- End regularSettingsDrive -->
 
                 <!-- Drive URL Input -->
                 <div class="mb-6">
@@ -427,6 +546,56 @@
 
             <!-- Sheet Tab -->
             <div id="sheet-tab" class="tab-content hidden">
+                <!-- LLM Mode Toggle -->
+                <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200">
+                    <label class="flex items-center justify-between cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <span class="icon text-2xl text-purple-600"><svg><use href="#icon-robot"/></svg></span>
+                            <div>
+                                <span class="font-semibold text-gray-800">LLM Mode</span>
+                                <p class="text-xs text-gray-500">Use AI with custom prompts per file</p>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" id="llmModeSheet" class="sr-only peer">
+                            <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- LLM Settings (shown when LLM mode is on) -->
+                <div id="llmSettingsSheet" class="hidden mb-6 space-y-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                    <!-- API Key -->
+                    <div id="apiKeyContainerSheet">
+                        <label class="block mb-2 font-semibold text-gray-800">API Key <span class="text-red-500">*</span></label>
+                        <input type="password" id="apiKeySheet" placeholder="Enter your API key (not stored)"
+                               class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100">
+                        <p class="text-xs text-gray-500 mt-1">Your API key is never stored - it's only used for this session</p>
+                    </div>
+                    
+                    <!-- Provider Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">LLM Provider</label>
+                        <div class="flex flex-wrap gap-2" id="providerSelectorSheet">
+                        </div>
+                    </div>
+                    
+                    <!-- Model Selection -->
+                    <div>
+                        <label class="block mb-2 font-semibold text-gray-800">Model</label>
+                        <select id="modelSelectorSheet" class="w-full p-3 border-2 border-gray-200 rounded-lg text-base transition-all focus:outline-none focus:border-purple-500">
+                        </select>
+                    </div>
+                    
+                    <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p class="text-blue-800 text-sm">
+                            <strong>Note:</strong> In LLM mode for Sheets, you'll be prompted to customize the prompt for each file individually.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Regular Processing Settings -->
+                <div id="regularSettingsSheet">
                 <!-- Profile Selector -->
                 <div class="mb-6">
                     <label class="flex items-center gap-2 mb-3 font-semibold text-gray-800">
@@ -465,6 +634,7 @@
                         </button>
                     </div>
                 </div>
+                </div> <!-- End regularSettingsSheet -->
 
                 <!-- Sheet URL Input -->
                 <div class="mb-6">
@@ -548,11 +718,27 @@
     <script>
         let availableProcessors = {};
         let availableFormats = {};
+        let llmProviders = {};
+        let defaultPrompt = '';
 
         // Default processors to check
         // Note: brackets_inline replaces regex for smarter bracket handling
         // Note: parentheses_notes is NOT included by default since most parens are spoken
         const defaultProcessors = ['special_chars', 'seif_marker', 'title_style', 'brackets_inline', 'whitespace'];
+        
+        // Track LLM mode per tab
+        let llmMode = {
+            'Upload': false,
+            'Drive': false,
+            'Sheet': false
+        };
+        
+        // Track selected provider per tab
+        let selectedProvider = {
+            'Upload': 'openai',
+            'Drive': 'openai',
+            'Sheet': 'openai'
+        };
         
         // Processor grouping for better UI organization
         const processorGroups = {
@@ -598,8 +784,153 @@
         // Track current selected profile per tab
         let currentProfile = {
             'Upload': '5712+',
-            'Drive': '5712+'
+            'Drive': '5712+',
+            'Sheet': '5712+'
         };
+        
+        // LLM Mode Functions
+        async function loadLLMProviders() {
+            try {
+                const response = await fetch('/llm-providers');
+                if (response.ok) {
+                    llmProviders = await response.json();
+                    populateProviderSelectors();
+                }
+            } catch (error) {
+                console.error('Failed to load LLM providers:', error);
+            }
+        }
+        
+        async function loadDefaultPrompt() {
+            try {
+                const response = await fetch('/llm-prompt');
+                if (response.ok) {
+                    const data = await response.json();
+                    defaultPrompt = data.prompt;
+                    // Set prompt in all textareas
+                    ['Upload', 'Drive'].forEach(suffix => {
+                        const textarea = document.getElementById('prompt' + suffix);
+                        if (textarea) textarea.value = defaultPrompt;
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load default prompt:', error);
+            }
+        }
+        
+        function populateProviderSelectors() {
+            ['Upload', 'Drive', 'Sheet'].forEach(suffix => {
+                const container = document.getElementById('providerSelector' + suffix);
+                if (!container) return;
+                
+                container.innerHTML = '';
+                
+                for (const [key, provider] of Object.entries(llmProviders)) {
+                    const isActive = selectedProvider[suffix] === key;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `provider-btn px-4 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                        isActive 
+                            ? 'bg-purple-600 text-white border-purple-600 shadow-md' 
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                    }`;
+                    btn.dataset.provider = key;
+                    btn.dataset.suffix = suffix;
+                    btn.textContent = provider.name;
+                    
+                    if (provider.description) {
+                        tippy(btn, {
+                            content: provider.description,
+                            placement: 'top',
+                            arrow: true,
+                            theme: 'light-border',
+                            animation: 'fade',
+                            delay: [300, 0],
+                        });
+                    }
+                    
+                    btn.addEventListener('click', () => selectProvider(key, suffix));
+                    container.appendChild(btn);
+                }
+                
+                // Populate model selector for this tab
+                updateModelSelector(suffix);
+            });
+        }
+        
+        function selectProvider(providerKey, suffix) {
+            selectedProvider[suffix] = providerKey;
+            
+            // Update button styles
+            const container = document.getElementById('providerSelector' + suffix);
+            container.querySelectorAll('.provider-btn').forEach(btn => {
+                const isActive = btn.dataset.provider === providerKey;
+                btn.className = `provider-btn px-4 py-2 rounded-lg text-sm font-medium transition-all border-2 ${
+                    isActive 
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-md' 
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                }`;
+            });
+            
+            // Show/hide API key field based on provider requirements
+            const provider = llmProviders[providerKey];
+            const apiKeyContainer = document.getElementById('apiKeyContainer' + suffix);
+            if (apiKeyContainer && provider) {
+                if (provider.requires_key === false) {
+                    apiKeyContainer.classList.add('hidden');
+                } else {
+                    apiKeyContainer.classList.remove('hidden');
+                }
+            }
+            
+            updateModelSelector(suffix);
+        }
+        
+        function updateModelSelector(suffix) {
+            const select = document.getElementById('modelSelector' + suffix);
+            if (!select) return;
+            
+            const provider = llmProviders[selectedProvider[suffix]];
+            if (!provider) return;
+            
+            select.innerHTML = '';
+            provider.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                if (model === provider.default_model) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        }
+        
+        function resetPrompt(suffix) {
+            const textarea = document.getElementById('prompt' + suffix);
+            if (textarea) textarea.value = defaultPrompt;
+        }
+        
+        function toggleLLMMode(suffix, enabled) {
+            llmMode[suffix] = enabled;
+            
+            const llmSettings = document.getElementById('llmSettings' + suffix);
+            const regularSettings = document.getElementById('regularSettings' + suffix);
+            
+            if (llmSettings) llmSettings.classList.toggle('hidden', !enabled);
+            if (regularSettings) regularSettings.classList.toggle('hidden', enabled);
+        }
+        
+        // Initialize LLM mode toggles
+        function initLLMToggles() {
+            ['Upload', 'Drive', 'Sheet'].forEach(suffix => {
+                const toggle = document.getElementById('llmMode' + suffix);
+                if (toggle) {
+                    toggle.addEventListener('change', (e) => {
+                        toggleLLMMode(suffix, e.target.checked);
+                    });
+                }
+            });
+        }
 
         function populateProfileSelector(suffix) {
             const container = document.getElementById('profileSelector' + suffix);
@@ -711,6 +1042,11 @@
                 selectProfile('5712+', 'Upload');
                 selectProfile('5712+', 'Drive');
                 selectProfile('5712+', 'Sheet');
+                
+                // Load LLM providers and prompt
+                loadLLMProviders();
+                loadDefaultPrompt();
+                initLLMToggles();
             } catch (error) {
                 console.error('Failed to load processors:', error.message || error);
                 const errorHtml = `
@@ -1072,11 +1408,36 @@
                 const formData = new FormData();
                 formData.append('file', selectedFiles[0]);
                 
-                // Get selected processors
-                const processors = getSelectedProcessors('Upload');
-                formData.append('processors', JSON.stringify(processors));
+                let endpoint = '/upload';
+                
+                // Check if LLM mode is enabled
+                if (llmMode['Upload']) {
+                    endpoint = '/process-llm';
+                    const provider = selectedProvider['Upload'];
+                    const providerInfo = llmProviders[provider];
+                    
+                    // Only require API key if provider needs it
+                    if (providerInfo && providerInfo.requires_key !== false) {
+                        const apiKey = document.getElementById('apiKeyUpload').value.trim();
+                        if (!apiKey) {
+                            showError('Please enter an API key for LLM processing');
+                            showLoading(false);
+                            return;
+                        }
+                        formData.append('api_key', apiKey);
+                    } else {
+                        formData.append('api_key', ''); // Send empty for Ollama
+                    }
+                    formData.append('provider', provider);
+                    formData.append('model', document.getElementById('modelSelectorUpload').value);
+                    formData.append('prompt', document.getElementById('promptUpload').value);
+                } else {
+                    // Get selected processors
+                    const processors = getSelectedProcessors('Upload');
+                    formData.append('processors', JSON.stringify(processors));
+                }
 
-                const response = await fetch('/upload', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     body: formData
                 });
@@ -1102,17 +1463,42 @@
             showLoading(true);
 
             try {
-                const processors = getSelectedProcessors('Drive');
-                const response = await fetch('/process-drive', {
+                let endpoint = '/process-drive';
+                let body = { drive_url: driveUrl };
+                
+                // Check if LLM mode is enabled
+                if (llmMode['Drive']) {
+                    endpoint = '/process-drive-llm';
+                    const provider = selectedProvider['Drive'];
+                    const providerInfo = llmProviders[provider];
+                    
+                    // Only require API key if provider needs it
+                    if (providerInfo && providerInfo.requires_key !== false) {
+                        const apiKey = document.getElementById('apiKeyDrive').value.trim();
+                        if (!apiKey) {
+                            showError('Please enter an API key for LLM processing');
+                            showLoading(false);
+                            return;
+                        }
+                        body.api_key = apiKey;
+                    } else {
+                        body.api_key = ''; // Send empty for Ollama
+                    }
+                    body.provider = provider;
+                    body.model = document.getElementById('modelSelectorDrive').value;
+                    body.prompt = document.getElementById('promptDrive').value;
+                } else {
+                    body.processors = getSelectedProcessors('Drive');
+                }
+                
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ 
-                        drive_url: driveUrl,
-                        processors: processors
-                    })
+                    body: JSON.stringify(body)
                 });
+
 
                 const results = await response.json();
                 displayResults(results);
@@ -1135,6 +1521,58 @@
             const outputFolderUrl = document.getElementById('outputFolderUrl').value.trim();
 
             hideError();
+            
+            // Check if LLM mode is enabled
+            if (llmMode['Sheet']) {
+                const provider = selectedProvider['Sheet'];
+                const providerInfo = llmProviders[provider];
+                let apiKey = '';
+                
+                // Only require API key if provider needs it
+                if (providerInfo && providerInfo.requires_key !== false) {
+                    apiKey = document.getElementById('apiKeySheet').value.trim();
+                    if (!apiKey) {
+                        showError('Please enter an API key for LLM processing');
+                        return;
+                    }
+                }
+                
+                // In LLM mode, we need to get the file list first and prompt for each
+                showLoading(true);
+                try {
+                    // Get file list from sheet
+                    const previewResponse = await fetch('/process-sheet-llm-preview', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sheet_url: sheetUrl, row_limit: rowLimit })
+                    });
+                    
+                    const previewData = await previewResponse.json();
+                    if (!previewData.success) {
+                        showError(previewData.error || 'Failed to load files from sheet');
+                        showLoading(false);
+                        return;
+                    }
+                    
+                    showLoading(false);
+                    
+                    // Show per-file prompt modal
+                    await processSheetFilesWithLLM(previewData.files, {
+                        sheetUrl,
+                        outputFolderUrl,
+                        apiKey,
+                        provider: provider,
+                        model: document.getElementById('modelSelectorSheet').value,
+                        defaultPrompt: previewData.default_prompt
+                    });
+                } catch (error) {
+                    showError('Failed to process: ' + error.message);
+                    showLoading(false);
+                }
+                return;
+            }
+            
+            // Regular processing
             showLoading(true);
 
             try {
@@ -1160,6 +1598,132 @@
                 showLoading(false);
             }
         });
+        
+        // LLM Sheet Processing with per-file prompts
+        async function processSheetFilesWithLLM(files, options) {
+            const results = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                // Show prompt modal for this file
+                const userPrompt = await showPromptModal(file, options.defaultPrompt, i + 1, files.length);
+                
+                if (userPrompt === null) {
+                    // User cancelled
+                    results.push({
+                        row: file.row,
+                        filename: file.display_text,
+                        success: false,
+                        error: 'Skipped by user'
+                    });
+                    continue;
+                }
+                
+                if (userPrompt === '__CANCEL_ALL__') {
+                    // User cancelled all remaining files
+                    break;
+                }
+                
+                // Process this file
+                showLoading(true);
+                try {
+                    const response = await fetch('/process-sheet-llm-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            file_url: file.doc_link,
+                            row_number: file.row,
+                            api_key: options.apiKey,
+                            provider: options.provider,
+                            model: options.model,
+                            prompt: userPrompt,
+                            sheet_url: options.sheetUrl,
+                            output_folder_url: options.outputFolderUrl || null
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    results.push(result);
+                } catch (error) {
+                    results.push({
+                        row: file.row,
+                        filename: file.display_text,
+                        success: false,
+                        error: error.message
+                    });
+                }
+                showLoading(false);
+            }
+            
+            // Display results
+            displaySheetResults({
+                success: true,
+                processed: results.length,
+                results: results
+            });
+        }
+        
+        function showPromptModal(file, defaultPrompt, currentIndex, totalFiles) {
+            return new Promise((resolve) => {
+                // Create modal overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+                overlay.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                        <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 text-white">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <h3 class="text-lg font-bold">LLM Processing - File ${currentIndex} of ${totalFiles}</h3>
+                                    <p class="text-purple-200 text-sm mt-1">${escapeHtml(file.display_text)}</p>
+                                </div>
+                                <span class="bg-white/20 px-3 py-1 rounded-full text-sm">Row ${file.row}</span>
+                            </div>
+                        </div>
+                        <div class="p-6 flex-1 overflow-y-auto">
+                            <label class="block mb-2 font-semibold text-gray-800">Customize Prompt for This File</label>
+                            <textarea id="modalPrompt" rows="12" 
+                                class="w-full p-3 border-2 border-gray-200 rounded-lg text-sm font-mono transition-all focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-100">${escapeHtml(defaultPrompt)}</textarea>
+                            <p class="text-xs text-gray-500 mt-2">Use <code class="bg-gray-200 px-1 rounded">{document_text}</code> as placeholder for the document content</p>
+                        </div>
+                        <div class="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
+                            <button id="skipBtn" class="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium">
+                                Skip This File
+                            </button>
+                            <div class="flex gap-3">
+                                <button id="cancelAllBtn" class="px-4 py-2 text-red-600 hover:text-red-800 font-medium">
+                                    Cancel All
+                                </button>
+                                <button id="processBtn" class="px-6 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors">
+                                    Process File
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+                
+                const promptTextarea = overlay.querySelector('#modalPrompt');
+                promptTextarea.focus();
+                
+                overlay.querySelector('#skipBtn').addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                    resolve(null);
+                });
+                
+                overlay.querySelector('#cancelAllBtn').addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                    resolve('__CANCEL_ALL__');
+                });
+                
+                overlay.querySelector('#processBtn').addEventListener('click', () => {
+                    const prompt = promptTextarea.value;
+                    document.body.removeChild(overlay);
+                    resolve(prompt);
+                });
+            });
+        }
 
         function displaySheetResults(results) {
             const resultsDiv = document.getElementById('results');
