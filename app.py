@@ -475,13 +475,14 @@ def process_drive_llm():
         return jsonify({'error': str(e), 'success': False}), 500
 
 
-@app.route('/process-sheet-llm-preview', methods=['POST'])
-def process_sheet_llm_preview():
-    """Get list of files from sheet for LLM processing with per-file prompts."""
+@app.route('/process-sheet-preview', methods=['POST'])
+def process_sheet_preview():
+    """Get list of files from sheet for sequential processing."""
     try:
         data = request.get_json()
         sheet_url = (data.get('sheet_url') or '').strip()
         row_limit = data.get('row_limit', 10)
+        skip_completed = data.get('skip_completed', True)
         
         if not sheet_url:
             return jsonify({'error': 'No Google Sheet URL provided'}), 400
@@ -503,14 +504,216 @@ def process_sheet_llm_preview():
                 'success': False
             }), 400
         
+        # Generate session ID
+        import uuid
+        from datetime import datetime
+        session_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        
         # Get file list from sheet
-        sheet_processor = SheetProcessor()
-        files = sheet_processor.get_files_from_sheet(sheet_url, row_limit)
+        sheet_proc = SheetProcessor()
+        result = sheet_proc.get_files_from_sheet(
+            sheet_url, 
+            row_limit, 
+            skip_completed=skip_completed,
+            skip_processing=True
+        )
         
         return jsonify({
             'success': True,
-            'files': files,
-            'default_prompt': get_default_prompt()
+            'files': result['files'],
+            'total': len(result['files']),
+            'session_id': session_id,
+            'spreadsheet_id': result['spreadsheet_id'],
+            'sheet_name': result['sheet_name'],
+            'column_indices': result['column_indices']
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/process-sheet-file', methods=['POST'])
+def process_sheet_file():
+    """Process a single file from sheet using regular processors."""
+    try:
+        data = request.get_json()
+        file_url = data.get('file_url', '').strip()
+        row_number = data.get('row_number')
+        processors_list = data.get('processors', None)
+        sheet_url = data.get('sheet_url', '').strip()
+        output_folder_url = data.get('output_folder_url', '').strip() or None
+        
+        # Session tracking data
+        session_id = data.get('session_id')
+        spreadsheet_id = data.get('spreadsheet_id')
+        sheet_name = data.get('sheet_name')
+        column_indices = data.get('column_indices', {})
+        
+        if not file_url:
+            return jsonify({'error': 'No file URL provided'}), 400
+        
+        sheet_proc = SheetProcessor()
+        
+        # Mark row as processing
+        if spreadsheet_id and sheet_name and column_indices and session_id:
+            try:
+                from sheet_processor import STATUS_PROCESSING
+                sheet_proc.update_row_status(
+                    spreadsheet_id, sheet_name, row_number, column_indices,
+                    STATUS_PROCESSING, session_id
+                )
+            except Exception as status_error:
+                print(f"Failed to update status to processing: {status_error}")
+        
+        # Download the file
+        downloader = DriveDownloader()
+        downloaded_files = downloader.process_drive_url(file_url, app.config['TEMP_FOLDER'])
+        
+        if not downloaded_files:
+            # Mark as failed
+            if spreadsheet_id and sheet_name and column_indices:
+                try:
+                    from sheet_processor import STATUS_FAILED
+                    sheet_proc.update_row_status(
+                        spreadsheet_id, sheet_name, row_number, column_indices,
+                        STATUS_FAILED, session_id
+                    )
+                except:
+                    pass
+            return jsonify({
+                'success': False,
+                'error': 'Could not download file',
+                'row': row_number
+            }), 404
+        
+        file_info = downloaded_files[0]
+        
+        try:
+            # Process with regular processors
+            result = processor.process_document(
+                file_info['path'], 
+                file_info['name'], 
+                processors=processors_list
+            )
+            
+            if not result.get('success', False):
+                # Mark as failed
+                if spreadsheet_id and sheet_name and column_indices:
+                    try:
+                        from sheet_processor import STATUS_FAILED
+                        sheet_proc.update_row_status(
+                            spreadsheet_id, sheet_name, row_number, column_indices,
+                            STATUS_FAILED, session_id
+                        )
+                    except:
+                        pass
+                return jsonify({
+                    'success': False,
+                    'filename': file_info['name'],
+                    'row': row_number,
+                    'error': result.get('error', 'Processing failed')
+                }), 400
+            
+            # Add row number to result
+            result['row'] = row_number
+            
+            # Upload to output folder if specified
+            if output_folder_url and result.get('cleaned_text'):
+                try:
+                    upload_result = sheet_proc.upload_cleaned_file(
+                        cleaned_text=result['cleaned_text'],
+                        original_filename=file_info['name'],
+                        output_folder_url=output_folder_url,
+                        temp_dir=app.config['TEMP_FOLDER']
+                    )
+                    if upload_result:
+                        result['uploaded_url'] = upload_result.get('url')
+                        
+                        # Update sheet with output URL
+                        if sheet_url:
+                            sheet_proc.update_sheet_row(
+                                sheet_url=sheet_url,
+                                row_number=row_number,
+                                output_url=upload_result.get('url'),
+                                clean_rate=result.get('clean_rate', {}).get('score')
+                            )
+                except Exception as upload_error:
+                    result['upload_error'] = str(upload_error)
+            
+            # Mark as completed
+            if spreadsheet_id and sheet_name and column_indices:
+                try:
+                    from sheet_processor import STATUS_COMPLETED
+                    sheet_proc.update_row_status(
+                        spreadsheet_id, sheet_name, row_number, column_indices,
+                        STATUS_COMPLETED, session_id
+                    )
+                except Exception as status_error:
+                    print(f"Failed to update status to completed: {status_error}")
+            
+            return jsonify(result)
+            
+        finally:
+            # Clean up downloaded file
+            if os.path.exists(file_info['path']):
+                os.remove(file_info['path'])
+    
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
+@app.route('/process-sheet-llm-preview', methods=['POST'])
+def process_sheet_llm_preview():
+    """Get list of files from sheet for LLM processing with per-file prompts."""
+    try:
+        data = request.get_json()
+        sheet_url = (data.get('sheet_url') or '').strip()
+        row_limit = data.get('row_limit', 10)
+        skip_completed = data.get('skip_completed', True)
+        
+        if not sheet_url:
+            return jsonify({'error': 'No Google Sheet URL provided'}), 400
+        
+        # Validate row_limit
+        try:
+            row_limit = int(row_limit)
+            if row_limit < 1:
+                row_limit = 1
+            elif row_limit > 1000:
+                row_limit = 1000
+        except (ValueError, TypeError):
+            row_limit = 10
+        
+        # Check if Google credentials exist
+        if not os.path.exists('credentials.json'):
+            return jsonify({
+                'error': 'Google Drive credentials not configured.',
+                'success': False
+            }), 400
+        
+        # Generate session ID
+        import uuid
+        from datetime import datetime
+        session_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        
+        # Get file list from sheet
+        sheet_proc = SheetProcessor()
+        result = sheet_proc.get_files_from_sheet(
+            sheet_url, 
+            row_limit,
+            skip_completed=skip_completed,
+            skip_processing=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'files': result['files'],
+            'total': len(result['files']),
+            'default_prompt': get_default_prompt(),
+            'session_id': session_id,
+            'spreadsheet_id': result['spreadsheet_id'],
+            'sheet_name': result['sheet_name'],
+            'column_indices': result['column_indices']
         })
     
     except Exception as e:
@@ -531,6 +734,12 @@ def process_sheet_llm_file():
         sheet_url = data.get('sheet_url', '').strip()
         output_folder_url = data.get('output_folder_url', '').strip() or None
         
+        # Session tracking data
+        session_id = data.get('session_id')
+        spreadsheet_id = data.get('spreadsheet_id')
+        sheet_name = data.get('sheet_name')
+        column_indices = data.get('column_indices', {})
+        
         if not file_url:
             return jsonify({'error': 'No file URL provided'}), 400
         
@@ -538,11 +747,34 @@ def process_sheet_llm_file():
         if not api_key and provider != 'ollama':
             return jsonify({'error': 'API key is required'}), 400
         
+        sheet_proc = SheetProcessor()
+        
+        # Mark row as processing
+        if spreadsheet_id and sheet_name and column_indices and session_id:
+            try:
+                from sheet_processor import STATUS_PROCESSING
+                sheet_proc.update_row_status(
+                    spreadsheet_id, sheet_name, row_number, column_indices,
+                    STATUS_PROCESSING, session_id
+                )
+            except Exception as status_error:
+                print(f"Failed to update status to processing: {status_error}")
+        
         # Download the file
         downloader = DriveDownloader()
         downloaded_files = downloader.process_drive_url(file_url, app.config['TEMP_FOLDER'])
         
         if not downloaded_files:
+            # Mark as failed
+            if spreadsheet_id and sheet_name and column_indices:
+                try:
+                    from sheet_processor import STATUS_FAILED
+                    sheet_proc.update_row_status(
+                        spreadsheet_id, sheet_name, row_number, column_indices,
+                        STATUS_FAILED, session_id
+                    )
+                except:
+                    pass
             return jsonify({
                 'success': False,
                 'error': 'Could not download file',
@@ -565,6 +797,16 @@ def process_sheet_llm_file():
             )
             
             if not llm_result['success']:
+                # Mark as failed
+                if spreadsheet_id and sheet_name and column_indices:
+                    try:
+                        from sheet_processor import STATUS_FAILED
+                        sheet_proc.update_row_status(
+                            spreadsheet_id, sheet_name, row_number, column_indices,
+                            STATUS_FAILED, session_id
+                        )
+                    except:
+                        pass
                 return jsonify({
                     'success': False,
                     'filename': file_info['name'],
@@ -597,9 +839,8 @@ def process_sheet_llm_file():
             
             # Update sheet and upload if needed
             if sheet_url:
-                sheet_processor = SheetProcessor()
                 # Update clean rate in sheet
-                sheet_processor.update_sheet_row(
+                sheet_proc.update_sheet_row(
                     sheet_url=sheet_url,
                     row_number=row_number,
                     clean_rate=100,
@@ -609,7 +850,18 @@ def process_sheet_llm_file():
                 )
                 
                 if output_folder_url:
-                    result['cleaned_link'] = sheet_processor.last_uploaded_link
+                    result['cleaned_link'] = sheet_proc.last_uploaded_link
+            
+            # Mark as completed
+            if spreadsheet_id and sheet_name and column_indices:
+                try:
+                    from sheet_processor import STATUS_COMPLETED
+                    sheet_proc.update_row_status(
+                        spreadsheet_id, sheet_name, row_number, column_indices,
+                        STATUS_COMPLETED, session_id
+                    )
+                except Exception as status_error:
+                    print(f"Failed to update status to completed: {status_error}")
             
             return jsonify(result)
             

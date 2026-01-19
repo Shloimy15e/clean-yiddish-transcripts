@@ -64,6 +64,8 @@ def process_with_llm(
             return _process_with_google(full_prompt, api_key, model)
         elif provider == "groq":
             return _process_with_groq(full_prompt, api_key, model)
+        elif provider == "openrouter":
+            return _process_with_openrouter(full_prompt, api_key, model)
         elif provider == "ollama":
             return _process_with_ollama(full_prompt, model)
         else:
@@ -221,6 +223,56 @@ def _process_with_groq(prompt: str, api_key: str, model: Optional[str] = None) -
         return {"success": False, "error": f"Groq error: {str(e)}"}
 
 
+def _process_with_openrouter(prompt: str, api_key: str, model: Optional[str] = None) -> dict:
+    """Process using OpenRouter API (access to all major models via single API)."""
+    try:
+        import requests
+    except ImportError:
+        return {"success": False, "error": "Requests package not installed. Run: pip install requests"}
+    
+    model = model or "openai/gpt-4o"
+    
+    try:
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/Shloimy15e/clean-yiddish-transcripts",
+                "X-Title": "Yiddish Transcript Cleaner"
+            },
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.1,
+                "max_tokens": 16000
+            },
+            timeout=120
+        )
+        
+        if response.status_code == 401:
+            return {"success": False, "error": "Invalid OpenRouter API key"}
+        elif response.status_code == 402:
+            return {"success": False, "error": "OpenRouter: Insufficient credits. Please add credits at openrouter.ai"}
+        elif response.status_code == 429:
+            return {"success": False, "error": "OpenRouter rate limit exceeded. Please try again later."}
+        elif response.status_code != 200:
+            return {"success": False, "error": f"OpenRouter API error: {response.text}"}
+        
+        result = response.json()
+        cleaned_text = result["choices"][0]["message"]["content"].strip()
+        return {
+            "success": True,
+            "cleaned_text": cleaned_text,
+            "model_used": model,
+            "provider": "openrouter"
+        }
+    except requests.exceptions.Timeout:
+        return {"success": False, "error": "OpenRouter API request timed out"}
+    except Exception as e:
+        return {"success": False, "error": f"OpenRouter error: {str(e)}"}
+
+
 def _process_with_ollama(prompt: str, model: Optional[str] = None) -> dict:
     """Process using local Ollama instance (no API key required)."""
     try:
@@ -335,6 +387,26 @@ def get_available_providers():
             "description": "Groq - Fast inference, free tier available",
             "requires_key": True,
             "free_tier": True
+        },
+        "openrouter": {
+            "name": "OpenRouter",
+            "models": [
+                "openai/gpt-5.2",
+                "openai/gpt-4o",
+                "openai/o3-mini",
+                "anthropic/claude-4.5-sonnet",
+                "anthropic/claude-sonnet-4",
+                "google/gemini-2.5-pro",
+                "google/gemini-2.0-flash",
+                "meta-llama/llama-3.3-70b-instruct",
+                "mistralai/mistral-large",
+                "deepseek/deepseek-r1",
+                "qwen/qwen-2.5-72b-instruct",
+                "perplexity/sonar-pro"
+            ],
+            "default_model": "openai/gpt-4o",
+            "description": "OpenRouter - Access all models via single API",
+            "requires_key": True
         },
         "ollama": {
             "name": "Ollama (Local)",

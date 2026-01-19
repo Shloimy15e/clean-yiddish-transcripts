@@ -26,6 +26,16 @@ SCOPES = [
 DOC_LINK_COL = 'Doc Link'
 CLEAN_RATE_COL = 'Clean Rate'
 CLEANED_LINK_COL = 'Cleaned Link'
+STATUS_COL = 'Status'
+SESSION_ID_COL = 'Session ID'
+PROCESSED_AT_COL = 'Processed At'
+
+# Processing status values
+STATUS_PENDING = ''
+STATUS_PROCESSING = 'Processing'
+STATUS_COMPLETED = 'Completed'
+STATUS_FAILED = 'Failed'
+STATUS_SKIPPED = 'Skipped'
 
 
 class SheetProcessor:
@@ -197,38 +207,30 @@ class SheetProcessor:
         column_indices = {}
         columns_to_add = []
         
-        # Find Doc Link column (required)
-        doc_link_idx = None
-        for i, header in enumerate(headers):
-            if header and header.strip().lower() == DOC_LINK_COL.lower():
-                doc_link_idx = i
-                column_indices[DOC_LINK_COL] = i
-                break
+        # All columns we need to find or create
+        required_columns = [
+            (DOC_LINK_COL, True),   # (name, is_required)
+            (CLEAN_RATE_COL, False),
+            (CLEANED_LINK_COL, False),
+            (STATUS_COL, False),
+            (SESSION_ID_COL, False),
+            (PROCESSED_AT_COL, False),
+        ]
         
-        if doc_link_idx is None:
-            raise Exception(f"'{DOC_LINK_COL}' column not found in the sheet. Please add a column with document links.")
-        
-        # Find or mark for creation: Clean Rate
-        clean_rate_idx = None
-        for i, header in enumerate(headers):
-            if header and header.strip().lower() == CLEAN_RATE_COL.lower():
-                clean_rate_idx = i
-                column_indices[CLEAN_RATE_COL] = i
-                break
-        
-        if clean_rate_idx is None:
-            columns_to_add.append(CLEAN_RATE_COL)
-        
-        # Find or mark for creation: Cleaned Link
-        cleaned_link_idx = None
-        for i, header in enumerate(headers):
-            if header and header.strip().lower() == CLEANED_LINK_COL.lower():
-                cleaned_link_idx = i
-                column_indices[CLEANED_LINK_COL] = i
-                break
-        
-        if cleaned_link_idx is None:
-            columns_to_add.append(CLEANED_LINK_COL)
+        # Find existing columns
+        for col_name, is_required in required_columns:
+            found = False
+            for i, header in enumerate(headers):
+                if header and header.strip().lower() == col_name.lower():
+                    column_indices[col_name] = i
+                    found = True
+                    break
+            
+            if not found:
+                if is_required:
+                    raise Exception(f"'{col_name}' column not found in the sheet. Please add a column with document links.")
+                else:
+                    columns_to_add.append(col_name)
         
         # Add missing columns
         if columns_to_add:
@@ -521,16 +523,19 @@ class SheetProcessor:
             if os.path.exists(file_path):
                 os.remove(file_path)
 
-    def get_files_from_sheet(self, sheet_url: str, row_limit: int = 10) -> List[Dict[str, Any]]:
+    def get_files_from_sheet(self, sheet_url: str, row_limit: int = 10, 
+                              skip_completed: bool = True, skip_processing: bool = True) -> Dict[str, Any]:
         """
         Get list of files from a Google Sheet for LLM processing.
         
         Args:
             sheet_url: URL to the Google Sheet
             row_limit: Maximum number of rows to process
+            skip_completed: Skip rows with status 'Completed'
+            skip_processing: Skip rows with status 'Processing'
             
         Returns:
-            List of dicts with file info (row, doc_link, display_text)
+            Dict with files list and metadata for updating status
         """
         if not self.sheets_service:
             self.authenticate()
@@ -539,16 +544,13 @@ class SheetProcessor:
         data, sheet_name, hyperlinks = self.get_sheet_data(spreadsheet_id)
         
         if not data or len(data) < 2:
-            return []
+            return {'files': [], 'spreadsheet_id': spreadsheet_id, 'sheet_name': sheet_name, 'column_indices': {}}
         
         headers = data[0]
+        column_indices = self.find_or_create_columns(spreadsheet_id, sheet_name, headers)
         
-        # Find doc link column
-        doc_link_col_idx = None
-        for i, header in enumerate(headers):
-            if header and header.strip().lower() == DOC_LINK_COL.lower():
-                doc_link_col_idx = i
-                break
+        doc_link_col_idx = column_indices.get(DOC_LINK_COL)
+        status_col_idx = column_indices.get(STATUS_COL)
         
         if doc_link_col_idx is None:
             raise Exception(f"'{DOC_LINK_COL}' column not found in the sheet.")
@@ -560,6 +562,14 @@ class SheetProcessor:
             
             if len(row) <= doc_link_col_idx:
                 continue
+            
+            # Check status if filtering is enabled
+            if status_col_idx is not None and len(row) > status_col_idx:
+                status = row[status_col_idx].strip() if row[status_col_idx] else ''
+                if skip_completed and status == STATUS_COMPLETED:
+                    continue
+                if skip_processing and status == STATUS_PROCESSING:
+                    continue
             
             # Check hyperlink first
             hyperlink_key = (row_idx - 1, doc_link_col_idx)
@@ -581,7 +591,67 @@ class SheetProcessor:
                 'display_text': display_text
             })
         
-        return files
+        return {
+            'files': files,
+            'spreadsheet_id': spreadsheet_id,
+            'sheet_name': sheet_name,
+            'column_indices': column_indices
+        }
+    
+    def update_row_status(self, spreadsheet_id: str, sheet_name: str, 
+                          row_index: int, column_indices: Dict[str, int],
+                          status: str, session_id: str = None,
+                          timestamp: str = None) -> None:
+        """
+        Update the status and session ID of a row in the sheet.
+        
+        Args:
+            spreadsheet_id: The spreadsheet ID
+            sheet_name: The sheet name
+            row_index: 1-based row index
+            column_indices: Dict of column names to indices
+            status: Status value (STATUS_PROCESSING, STATUS_COMPLETED, STATUS_FAILED, etc.)
+            session_id: Optional session identifier
+            timestamp: Optional timestamp string (defaults to current time)
+        """
+        if not self.sheets_service:
+            self.authenticate()
+        
+        from datetime import datetime
+        
+        updates = []
+        
+        if STATUS_COL in column_indices:
+            col_letter = self._col_index_to_letter(column_indices[STATUS_COL])
+            updates.append({
+                'range': f"'{sheet_name}'!{col_letter}{row_index}",
+                'values': [[status]]
+            })
+        
+        if session_id and SESSION_ID_COL in column_indices:
+            col_letter = self._col_index_to_letter(column_indices[SESSION_ID_COL])
+            updates.append({
+                'range': f"'{sheet_name}'!{col_letter}{row_index}",
+                'values': [[session_id]]
+            })
+        
+        if status in (STATUS_COMPLETED, STATUS_FAILED) and PROCESSED_AT_COL in column_indices:
+            if timestamp is None:
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            col_letter = self._col_index_to_letter(column_indices[PROCESSED_AT_COL])
+            updates.append({
+                'range': f"'{sheet_name}'!{col_letter}{row_index}",
+                'values': [[timestamp]]
+            })
+        
+        if updates:
+            self.sheets_service.spreadsheets().values().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={
+                    'valueInputOption': 'RAW',
+                    'data': updates
+                }
+            ).execute()
 
     def update_sheet_row(self, sheet_url: str = None, spreadsheet_id: str = None,
                           sheet_name: str = None, row_number: int = None,
