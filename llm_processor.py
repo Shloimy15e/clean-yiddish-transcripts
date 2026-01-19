@@ -7,13 +7,28 @@ from typing import Optional
 
 
 # Default prompt template for cleaning Yiddish transcripts
-DEFAULT_PROMPT = """You are cleaning a Yiddish transcript document. Your task is to extract only the actual spoken words and remove everything else.
+DEFAULT_PROMPT = """You are an expert editor cleaning a Yiddish transcript. Your task is to intelligently extract only the actual spoken content while removing editorial additions.
 
-Remove all non-speech content such as: titles, headings, section markers, editorial notes, timestamps, page numbers, speaker labels, annotations, and any other meta-information.
+IMPORTANT: Use contextual understanding, NOT formatting rules. Some brackets, parentheses, or other punctuation may be part of the actual spoken content (e.g., someone quoting text, referencing sources, or speaking about punctuation itself). Keep these.
 
-Keep only the actual spoken words. Maintain the original language and paragraph structure.
+REMOVE only content that is clearly editorial/meta-information based on MEANING and CONTEXT:
+- Titles, headings, or section labels added by transcribers
+- Editorial notes explaining what's happening (e.g., "[unclear]", "[inaudible]", "[speaker pauses]")
+- Timestamps, page numbers, or document markers
+- Speaker identification labels (e.g., "Speaker 1:", "Rabbi X:")
+- Transcriber annotations or comments about the recording
+- Stage directions or non-verbal descriptions (e.g., "[laughs]", "[coughs]")
 
-Return ONLY the cleaned text with no explanation or commentary.
+KEEP all actual spoken content, including:
+- Quoted text or citations the speaker mentions (even if in brackets)
+- References to sources, seforim, or pesukim
+- Any punctuation or formatting that represents actual speech
+- Parenthetical remarks that were actually spoken
+- Hebrew/Aramaic phrases interspersed in the Yiddish
+
+Use your judgment based on context and meaning. When uncertain whether something was spoken or added by a transcriber, lean toward keeping it.
+
+Maintain the original paragraph structure. Return ONLY the cleaned text with no explanation.
 
 ---
 
@@ -391,20 +406,27 @@ def get_available_providers():
         "openrouter": {
             "name": "OpenRouter",
             "models": [
-                "openai/gpt-5.2",
                 "openai/gpt-4o",
-                "openai/o3-mini",
-                "anthropic/claude-4.5-sonnet",
-                "anthropic/claude-sonnet-4",
-                "google/gemini-2.5-pro",
-                "google/gemini-2.0-flash",
+                "openai/gpt-4o-mini",
+                "openai/gpt-4-turbo",
+                "openai/o1-mini",
+                "openai/o1-preview",
+                "anthropic/claude-3.5-sonnet",
+                "anthropic/claude-3-5-sonnet-20241022",
+                "anthropic/claude-3-haiku",
+                "google/gemini-pro-1.5",
+                "google/gemini-flash-1.5",
+                "google/gemini-2.0-flash-exp",
                 "meta-llama/llama-3.3-70b-instruct",
-                "mistralai/mistral-large",
+                "meta-llama/llama-3.1-405b-instruct",
+                "mistralai/mistral-large-2411",
+                "mistralai/mixtral-8x22b-instruct",
+                "deepseek/deepseek-chat",
                 "deepseek/deepseek-r1",
                 "qwen/qwen-2.5-72b-instruct",
-                "perplexity/sonar-pro"
+                "cohere/command-r-plus"
             ],
-            "default_model": "openai/gpt-4o",
+            "default_model": "openai/gpt-4o-mini",
             "description": "OpenRouter - Access all models via single API",
             "requires_key": True
         },

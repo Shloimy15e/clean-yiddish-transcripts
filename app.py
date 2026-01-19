@@ -11,6 +11,7 @@ from drive_downloader import DriveDownloader
 from cleaner import TranscriptCleaner
 from sheet_processor import SheetProcessor
 from llm_processor import process_with_llm, get_default_prompt, get_available_providers
+from diff_utils import generate_line_diff, get_diff_summary
 
 load_dotenv()  # Load .env file at the top of app.py
 
@@ -269,6 +270,29 @@ def health():
     return jsonify({'status': 'healthy'})
 
 
+@app.route('/generate-diff', methods=['POST'])
+def generate_diff():
+    """Generate diff between original and cleaned text."""
+    try:
+        data = request.get_json()
+        original_text = data.get('original', '')
+        cleaned_text = data.get('cleaned', '')
+        
+        if not original_text or not cleaned_text:
+            return jsonify({'error': 'Both original and cleaned text are required'}), 400
+        
+        diff_data = generate_line_diff(original_text, cleaned_text)
+        diff_summary = get_diff_summary(original_text, cleaned_text)
+        
+        return jsonify({
+            'success': True,
+            'diff': diff_data,
+            'summary': diff_summary
+        })
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
 @app.route('/llm-providers', methods=['GET'])
 def get_llm_providers():
     """Get available LLM providers and their models."""
@@ -341,6 +365,10 @@ def process_llm():
             removed_words = original_words - cleaned_words
             reduction_pct = round((removed_words / original_words * 100), 1) if original_words > 0 else 0
             
+            # Generate diff data for comparison view
+            diff_data = generate_line_diff(original_text, cleaned_text)
+            diff_summary = get_diff_summary(original_text, cleaned_text)
+            
             return jsonify({
                 'success': True,
                 'filename': filename,
@@ -352,9 +380,13 @@ def process_llm():
                     'original_words': original_words,
                     'cleaned_words': cleaned_words,
                     'removed_words': removed_words,
-                    'removed_lines': 0,  # Not tracked for LLM
-                    'reduction_percentage': reduction_pct
+                    'removed_lines': diff_data['stats']['lines_removed'],
+                    'lines_added': diff_data['stats']['lines_added'],
+                    'lines_modified': diff_data['stats']['lines_modified'],
+                    'reduction_percentage': reduction_pct,
+                    'similarity_ratio': diff_summary['similarity_ratio']
                 },
+                'diff': diff_data,
                 'clean_rate': {
                     'score': 100,  # LLM output assumed clean
                     'category': 'llm-processed'
@@ -425,6 +457,10 @@ def process_drive_llm():
                     removed_words = original_words - cleaned_words
                     reduction_pct = round((removed_words / original_words * 100), 1) if original_words > 0 else 0
                     
+                    # Generate diff data
+                    diff_data = generate_line_diff(original_text, cleaned_text)
+                    diff_summary = get_diff_summary(original_text, cleaned_text)
+                    
                     results.append({
                         'success': True,
                         'filename': file_info['name'],
@@ -436,9 +472,13 @@ def process_drive_llm():
                             'original_words': original_words,
                             'cleaned_words': cleaned_words,
                             'removed_words': removed_words,
-                            'removed_lines': 0,
-                            'reduction_percentage': reduction_pct
+                            'removed_lines': diff_data['stats']['lines_removed'],
+                            'lines_added': diff_data['stats']['lines_added'],
+                            'lines_modified': diff_data['stats']['lines_modified'],
+                            'reduction_percentage': reduction_pct,
+                            'similarity_ratio': diff_summary['similarity_ratio']
                         },
+                        'diff': diff_data,
                         'clean_rate': {
                             'score': 100,
                             'category': 'llm-processed'
@@ -822,6 +862,10 @@ def process_sheet_llm_file():
             removed_words = original_words - cleaned_words
             reduction_pct = round((removed_words / original_words * 100), 1) if original_words > 0 else 0
             
+            # Generate diff data
+            diff_data = generate_line_diff(original_text, cleaned_text)
+            diff_summary = get_diff_summary(original_text, cleaned_text)
+            
             result = {
                 'success': True,
                 'filename': file_info['name'],
@@ -833,8 +877,13 @@ def process_sheet_llm_file():
                     'original_words': original_words,
                     'cleaned_words': cleaned_words,
                     'removed_words': removed_words,
-                    'reduction_percentage': reduction_pct
-                }
+                    'removed_lines': diff_data['stats']['lines_removed'],
+                    'lines_added': diff_data['stats']['lines_added'],
+                    'lines_modified': diff_data['stats']['lines_modified'],
+                    'reduction_percentage': reduction_pct,
+                    'similarity_ratio': diff_summary['similarity_ratio']
+                },
+                'diff': diff_data
             }
             
             # Update sheet and upload if needed

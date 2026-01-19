@@ -221,6 +221,126 @@
             background: #94a3b8;
         }
         
+        /* Diff View Styling */
+        .diff-view {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8125rem;
+            line-height: 1.5;
+        }
+        .diff-line {
+            display: flex;
+            border-bottom: 1px solid #f1f5f9;
+            min-height: 1.75rem;
+        }
+        .diff-line:hover {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        .diff-line-num {
+            width: 3rem;
+            padding: 0.25rem 0.5rem;
+            text-align: right;
+            color: #94a3b8;
+            background-color: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+            user-select: none;
+        }
+        .diff-line-content {
+            flex: 1;
+            padding: 0.25rem 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .diff-line.removed {
+            background-color: #fef2f2;
+        }
+        .diff-line.removed .diff-line-content {
+            color: #991b1b;
+        }
+        .diff-line.removed .diff-line-num {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .diff-line.added {
+            background-color: #f0fdf4;
+        }
+        .diff-line.added .diff-line-content {
+            color: #166534;
+        }
+        .diff-line.added .diff-line-num {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+        .diff-line.modified {
+            background-color: #fefce8;
+        }
+        .diff-line.modified .diff-line-num {
+            background-color: #fef9c3;
+            color: #a16207;
+        }
+        .diff-word-removed {
+            background-color: #fecaca;
+            text-decoration: line-through;
+            color: #991b1b;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .diff-word-added {
+            background-color: #bbf7d0;
+            color: #166534;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+        .diff-stats-bar {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.8125rem;
+        }
+        .diff-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+        .diff-stat-removed {
+            color: #dc2626;
+        }
+        .diff-stat-added {
+            color: #16a34a;
+        }
+        .diff-stat-modified {
+            color: #ca8a04;
+        }
+        .diff-stat-similarity {
+            color: #6366f1;
+        }
+        .diff-view-toggle {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            background: #f1f5f9;
+            border-radius: 0.5rem;
+        }
+        .diff-view-toggle button {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            transition: all 0.15s ease;
+            color: #64748b;
+        }
+        .diff-view-toggle button.active {
+            background: white;
+            color: #1e40af;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .diff-view-toggle button:hover:not(.active) {
+            color: #475569;
+        }
+        
         /* Background pattern */
         .bg-pattern {
             background-color: #2563eb;
@@ -2062,6 +2182,8 @@
                 window.cleanedTexts[index] = result.cleaned_text;
                 window.originalTexts[index] = result.original_text;
                 window.removedItems[index] = result.removed_items;
+                window.diffData = window.diffData || {};
+                window.diffData[index] = result.diff;
                 
                 const stats = result.statistics || {};
                 const processorsUsed = result.processors || [];
@@ -2168,32 +2290,54 @@
                         <!-- Text Preview -->
                         <div class="p-5">
                             ${isLlmProcessed ? `
-                            <!-- LLM Mode: Side-by-side comparison -->
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div class="border border-gray-200 rounded-xl overflow-hidden">
-                                    <div class="bg-gray-50 px-4 py-3 font-semibold border-b border-gray-200 flex justify-between items-center">
-                                        <span class="text-gray-700">Original Text</span>
+                            <!-- LLM Mode: Tabbed view with Side-by-side and Diff options -->
+                            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                                <!-- View Toggle Header -->
+                                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                                    <div class="diff-view-toggle">
+                                        <button class="active" onclick="switchResultView(${index}, 'sidebyside', this)">Side by Side</button>
+                                        <button onclick="switchResultView(${index}, 'diff', this)">Diff View</button>
+                                        <button onclick="switchResultView(${index}, 'cleaned', this)">Cleaned Only</button>
+                                    </div>
+                                    <div class="flex gap-2">
                                         <button class="copy-btn px-3 py-1.5 bg-gray-600 text-white rounded-lg text-sm font-medium transition-all hover:bg-gray-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'original', this)">
-                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
+                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Original
                                         </button>
-                                    </div>
-                                    <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${escapeHtml(result.original_text)}</div>
-                                </div>
-                                <div class="border border-emerald-200 rounded-xl overflow-hidden">
-                                    <div class="bg-emerald-50 px-4 py-3 font-semibold border-b border-emerald-200 flex justify-between items-center">
-                                        <span class="text-emerald-700">Cleaned Text (LLM)</span>
                                         <button class="copy-btn px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-sm font-medium transition-all hover:bg-emerald-700 flex items-center gap-1.5" onclick="copyToClipboard(${index}, 'cleaned', this)">
-                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Copy
+                                            <span class="icon"><svg><use href="#icon-copy"/></svg></span> Cleaned
                                         </button>
                                     </div>
-                                    <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${escapeHtml(result.cleaned_text)}</div>
+                                </div>
+                                
+                                <!-- Side by Side View -->
+                                <div id="view-sidebyside-${index}" class="result-view">
+                                    <div class="grid grid-cols-1 lg:grid-cols-2">
+                                        <div class="border-r border-gray-200">
+                                            <div class="bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 border-b border-gray-200">Original</div>
+                                            <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${escapeHtml(result.original_text)}</div>
+                                        </div>
+                                        <div>
+                                            <div class="bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 border-b border-gray-200">Cleaned</div>
+                                            <div dir="rtl" class="p-4 max-h-96 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${escapeHtml(result.cleaned_text)}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Diff View (populated after render) -->
+                                <div id="view-diff-${index}" class="result-view hidden" data-diff-index="${index}">
+                                    <div class="p-4 text-gray-400 text-center">Loading diff view...</div>
+                                </div>
+                                
+                                <!-- Cleaned Only View -->
+                                <div id="view-cleaned-${index}" class="result-view hidden">
+                                    <div dir="rtl" class="p-4 max-h-[500px] overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap break-words text-gray-700 custom-scrollbar bg-white">${escapeHtml(result.cleaned_text)}</div>
                                 </div>
                             </div>
                             <p class="text-xs text-gray-500 mt-3 text-center">
                                 <svg class="w-4 h-4 inline-block mr-1 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
                                 </svg>
-                                LLM processing transforms text holistically. Compare side-by-side to see what was removed.
+                                ${stats.similarity_ratio ? `${stats.similarity_ratio}% similar to original` : 'LLM processing transforms text holistically'}
                             </p>
                             ` : `
                             <!-- Regular Mode: Highlighted removals -->
@@ -2219,6 +2363,17 @@
             });
 
             resultsDiv.classList.remove('hidden');
+            
+            // Populate diff views after HTML is inserted
+            document.querySelectorAll('[data-diff-index]').forEach(diffContainer => {
+                const idx = parseInt(diffContainer.getAttribute('data-diff-index'));
+                const diffData = window.diffData && window.diffData[idx];
+                if (diffData) {
+                    diffContainer.innerHTML = renderDiffView(diffData, idx);
+                } else {
+                    diffContainer.innerHTML = '<div class="p-4 text-gray-500">Diff data not available</div>';
+                }
+            });
             
             // Scroll to results
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2421,6 +2576,133 @@
             } catch (err) {
                 console.error('Failed to copy:', err);
                 showError('Failed to copy to clipboard');
+            }
+        }
+        
+        // Diff View Functions
+        function renderDiffView(diffData, index) {
+            if (!diffData || !diffData.changes) {
+                return '<div class="p-4 text-gray-500">No diff data available</div>';
+            }
+            
+            const stats = diffData.stats || {};
+            let html = `
+                <div class="diff-stats-bar">
+                    <div class="diff-stat diff-stat-removed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                        </svg>
+                        <span>${stats.lines_removed || 0} removed</span>
+                    </div>
+                    <div class="diff-stat diff-stat-added">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        <span>${stats.lines_added || 0} added</span>
+                    </div>
+                    <div class="diff-stat diff-stat-modified">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
+                        <span>${stats.lines_modified || 0} modified</span>
+                    </div>
+                    <div class="diff-stat diff-stat-similarity ml-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>${stats.lines_unchanged || 0} unchanged</span>
+                    </div>
+                </div>
+            `;
+            
+            html += '<div class="diff-view max-h-[500px] overflow-y-auto custom-scrollbar">';
+            
+            for (const change of diffData.changes) {
+                const lineType = change.type;
+                const origNum = change.original_line || '';
+                const cleanNum = change.cleaned_line || '';
+                
+                if (lineType === 'unchanged') {
+                    html += `
+                        <div class="diff-line" dir="rtl">
+                            <div class="diff-line-num">${origNum}</div>
+                            <div class="diff-line-num">${cleanNum}</div>
+                            <div class="diff-line-content">${escapeHtml(change.original || '')}</div>
+                        </div>
+                    `;
+                } else if (lineType === 'removed') {
+                    html += `
+                        <div class="diff-line removed" dir="rtl">
+                            <div class="diff-line-num">${origNum}</div>
+                            <div class="diff-line-num"></div>
+                            <div class="diff-line-content">− ${escapeHtml(change.original || '')}</div>
+                        </div>
+                    `;
+                } else if (lineType === 'added') {
+                    html += `
+                        <div class="diff-line added" dir="rtl">
+                            <div class="diff-line-num"></div>
+                            <div class="diff-line-num">${cleanNum}</div>
+                            <div class="diff-line-content">+ ${escapeHtml(change.cleaned || '')}</div>
+                        </div>
+                    `;
+                } else if (lineType === 'modified') {
+                    // Show inline word diff if available
+                    const wordDiff = change.word_diff;
+                    let content = '';
+                    if (wordDiff && wordDiff.length > 0) {
+                        content = renderWordDiff(wordDiff);
+                    } else {
+                        content = `<span class="diff-word-removed">${escapeHtml(change.original || '')}</span> → <span class="diff-word-added">${escapeHtml(change.cleaned || '')}</span>`;
+                    }
+                    html += `
+                        <div class="diff-line modified" dir="rtl">
+                            <div class="diff-line-num">${origNum}</div>
+                            <div class="diff-line-num">${cleanNum}</div>
+                            <div class="diff-line-content">${content}</div>
+                        </div>
+                    `;
+                }
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function renderWordDiff(wordDiff) {
+            let html = '';
+            for (const segment of wordDiff) {
+                const text = escapeHtml(segment.text || '');
+                if (segment.type === 'unchanged') {
+                    html += text;
+                } else if (segment.type === 'removed') {
+                    html += `<span class="diff-word-removed">${text}</span>`;
+                } else if (segment.type === 'added') {
+                    html += `<span class="diff-word-added">${text}</span>`;
+                }
+            }
+            return html;
+        }
+        
+        function switchResultView(index, viewType, button) {
+            // Hide all views for this result
+            document.querySelectorAll(`#view-sidebyside-${index}, #view-diff-${index}, #view-cleaned-${index}`).forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show selected view
+            const targetView = document.getElementById(`view-${viewType}-${index}`);
+            if (targetView) {
+                targetView.classList.remove('hidden');
+            }
+            
+            // Update button states
+            const toggleContainer = button.closest('.diff-view-toggle');
+            if (toggleContainer) {
+                toggleContainer.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
             }
         }
     </script>
